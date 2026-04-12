@@ -1,0 +1,2652 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OfficeIQ Bench</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f8f9fb;
+  --bg2: #ffffff;
+  --bg3: #f1f3f7;
+  --bg4: #e8ecf2;
+  --border: #e4e8ef;
+  --border2: #d0d7e3;
+  --text: #0f1623;
+  --text2: #4b5672;
+  --text3: #8892a8;
+  --accent: #4f6ef7;
+  --accent-light: #eef0fe;
+  --accent-hover: #3a59e8;
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --yellow: #d97706;
+  --yellow-light: #fef3c7;
+  --orange: #ea580c;
+  --orange-light: #ffedd5;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --transition: 0.15s ease;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+/* ─── SIDEBAR ─────────────────────────────────────────── */
+.sidebar {
+  width: 230px; min-width: 230px; background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+  box-shadow: var(--shadow);
+}
+.sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); }
+.sidebar-logo h1 { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+.sidebar-logo h1 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.sidebar-logo span { font-size: 11px; color: var(--text3); margin-top: 2px; display: block; }
+.nav-section { padding: 12px 12px 4px; }
+.nav-section-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; padding: 0 8px; margin-bottom: 4px; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; cursor: pointer; color: var(--text2); font-size: 13px; font-weight: 500; border-radius: var(--radius-sm); transition: background var(--transition), color var(--transition); margin-bottom: 1px; }
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--accent-light); color: var(--accent); }
+.nav-item .icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+.sidebar-footer { margin-top: auto; padding: 14px 20px; border-top: 1px solid var(--border); }
+.server-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); }
+.server-badge .dot-status { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); }
+.server-badge .dot-status.online { background: var(--green); }
+
+/* ─── MAIN ────────────────────────────────────────────── */
+.main { margin-left: 230px; flex: 1; padding: 28px 32px; max-width: calc(100vw - 230px); }
+.page { display: none; }
+.page.active { display: block; }
+.page-header { margin-bottom: 24px; }
+.page-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+.page-sub { color: var(--text3); font-size: 13px; margin-top: 3px; }
+
+/* ─── CARDS ───────────────────────────────────────────── */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.card-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 16px; }
+.mb { margin-bottom: 16px; }
+
+/* ─── FORM ────────────────────────────────────────────── */
+.form-group { margin-bottom: 14px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; }
+.form-label .opt { font-weight: 400; color: var(--text3); }
+.form-input, .form-textarea, .form-select { width: 100%; background: var(--bg2); border: 1px solid var(--border2); color: var(--text); border-radius: var(--radius-sm); padding: 8px 11px; font-size: 13px; font-family: inherit; outline: none; transition: border-color var(--transition), box-shadow var(--transition); }
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,110,247,0.1); }
+.form-textarea { resize: vertical; min-height: 72px; }
+.form-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* ─── BUTTONS ─────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius-sm); border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition); font-family: inherit; line-height: 1; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-secondary { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg4); color: var(--text); }
+.btn-danger { background: var(--red-light); color: var(--red); border: 1px solid #fecaca; }
+.btn-danger:hover { background: #fecaca; }
+.btn-ghost { background: transparent; color: var(--text3); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg3); color: var(--text2); }
+.btn-warn { background: var(--orange-light); color: var(--orange); border: 1px solid #fed7aa; }
+.btn-warn:hover { background: #fed7aa; }
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+.btn-xs { padding: 3px 8px; font-size: 11px; }
+
+/* ─── BADGES ──────────────────────────────────────────── */
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.badge-easy { background: var(--green-light); color: var(--green); }
+.badge-medium { background: var(--yellow-light); color: var(--yellow); }
+.badge-hard { background: var(--red-light); color: var(--red); }
+.badge-accent { background: var(--accent-light); color: var(--accent); }
+.badge-gray { background: var(--bg3); color: var(--text3); }
+
+/* ─── SCORE PILL ──────────────────────────────────────── */
+.score-pill { display: inline-block; padding: 3px 9px; border-radius: var(--radius-sm); font-weight: 700; font-size: 13px; min-width: 44px; text-align: center; }
+
+/* ─── PROGRESS ────────────────────────────────────────── */
+.progress-wrap { background: var(--bg3); border-radius: 999px; height: 6px; overflow: hidden; }
+.progress-bar { height: 100%; border-radius: 999px; background: var(--accent); transition: width 0.3s ease; }
+.progress-bar.green { background: var(--green); }
+
+/* ─── TABLE ───────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg2); box-shadow: var(--shadow); margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: var(--bg); color: var(--text3); font-weight: 600; padding: 10px 14px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text2); }
+tr:last-child td { border-bottom: none; }
+tr.expandable:hover td { background: var(--bg); cursor: pointer; }
+
+/* ─── TABS ────────────────────────────────────────────── */
+.tabs { display: flex; gap: 2px; background: var(--bg3); border-radius: var(--radius-sm); padding: 3px; width: fit-content; margin-bottom: 20px; }
+.tab { padding: 6px 14px; border-radius: 5px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text3); transition: all var(--transition); }
+.tab.active { background: var(--bg2); color: var(--text); box-shadow: var(--shadow); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ─── LOG ─────────────────────────────────────────────── */
+.log { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; height: 160px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace; font-size: 11.5px; line-height: 1.7; }
+.log-entry { color: var(--text3); }
+.log-entry.ok { color: var(--green); }
+.log-entry.err { color: var(--red); }
+.log-entry.phase { color: var(--accent); font-weight: 600; }
+.log-entry.done { color: var(--yellow); font-weight: 600; }
+.log-entry.warn { color: var(--orange); }
+
+/* ─── SPINNER ─────────────────────────────────────────── */
+.spinner { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--border2); border-top-color: var(--accent); animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── STAT BOX ────────────────────────────────────────── */
+.stat-box { text-align: center; }
+.stat-box .val { font-size: 2rem; font-weight: 800; line-height: 1.1; color: var(--text); }
+.stat-box .lbl { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+/* ─── CAT BARS ────────────────────────────────────────── */
+.cat-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cat-bar-label { font-size: 12px; color: var(--text2); width: 115px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-bar-wrap { flex: 1; background: var(--bg3); border-radius: 999px; height: 6px; }
+.cat-bar-fill { height: 6px; border-radius: 999px; }
+.cat-bar-val { font-size: 12px; font-weight: 700; width: 30px; text-align: right; }
+
+/* ─── MODEL CARD ──────────────────────────────────────── */
+.model-config-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; position: relative; }
+.model-config-card .model-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.model-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+
+/* ─── CHECKBOX GROUP ──────────────────────────────────── */
+.checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.checkbox-item { display: flex; align-items: center; gap: 5px; }
+.checkbox-item input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+.checkbox-item label { font-size: 12px; color: var(--text2); cursor: pointer; }
+
+/* ─── DETAIL PANEL ────────────────────────────────────── */
+.detail-row td { padding: 0; background: var(--bg) !important; }
+.detail-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
+.detail-section-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+.detail-section-text { font-size: 12.5px; color: var(--text2); line-height: 1.65; white-space: pre-wrap; }
+.scores-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.score-chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px; font-size: 11px; color: var(--text3); }
+.score-chip b { font-weight: 700; }
+
+/* ─── RESULT ITEM ─────────────────────────────────────── */
+.result-item { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.result-item:last-child { border-bottom: none; }
+.result-score { font-size: 1.6rem; font-weight: 800; min-width: 52px; text-align: center; }
+.result-info { flex: 1; min-width: 0; }
+.result-name { font-weight: 600; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.result-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ─── CHART ───────────────────────────────────────────── */
+.chart-container { position: relative; height: 280px; }
+
+/* ─── RUN PROGRESS ────────────────────────────────────── */
+.model-progress-block { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; }
+.model-progress-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.prog-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.prog-label { font-size: 11px; color: var(--text3); width: 100px; flex-shrink: 0; }
+.prog-val { font-size: 11px; color: var(--text2); width: 48px; text-align: right; flex-shrink: 0; }
+
+/* ─── NOTIFICATIONS ───────────────────────────────────── */
+.notif { position: fixed; bottom: 20px; right: 20px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; z-index: 9999; max-width: 300px; box-shadow: var(--shadow-md); animation: slideUp 0.2s ease; }
+.notif.ok { border-left: 3px solid var(--green); }
+.notif.err { border-left: 3px solid var(--red); }
+.notif.warn { border-left: 3px solid var(--orange); }
+@keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ─── EMPTY ───────────────────────────────────────────── */
+.empty { text-align: center; padding: 48px 20px; color: var(--text3); }
+.empty .icon { font-size: 2.4rem; margin-bottom: 10px; }
+.empty p { font-size: 13px; }
+
+/* ─── DIVIDER ─────────────────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* ─── SPEED TEST ──────────────────────────────────────── */
+.speed-result-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.speed-result-row:last-child { border-bottom: none; }
+
+/* ─── COMPARE ─────────────────────────────────────────── */
+.compare-model-block { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+.compare-model-header { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; user-select: none; transition: background var(--transition); }
+.compare-model-header:hover { background: var(--bg3); }
+.compare-model-score { font-size: 1.8rem; font-weight: 800; min-width: 56px; }
+.compare-model-name { flex: 1; font-weight: 600; font-size: 14px; }
+.compare-model-meta { font-size: 11px; color: var(--text3); }
+.compare-model-body { display: none; padding: 16px 18px; border-top: 1px solid var(--border); background: var(--bg); }
+.compare-model-body.open { display: block; }
+
+/* ─── SCROLLBAR ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ─── SBS / ANALYTICS ────────────────────────────────── */
+#sbs-wrap { scroll-margin-top: 20px; }
+.chart-line-container { position: relative; height: 240px; }
+
+/* ─── DARK MODE ───────────────────────────────────────── */
+body.dark {
+  --bg: #0f172a; --bg2: #1e293b; --bg3: #0f172a; --bg4: #1e293b;
+  --border: #334155; --border2: #475569;
+  --text: #f1f5f9; --text2: #cbd5e1; --text3: #64748b;
+  --accent-light: rgba(79,110,247,0.15);
+  --green-light: rgba(22,163,74,0.15);
+  --yellow-light: rgba(217,119,6,0.15);
+  --orange-light: rgba(234,88,12,0.15);
+  --red-light: rgba(220,38,38,0.15);
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+}
+body.dark .form-input,
+body.dark .form-textarea,
+body.dark .form-select { background: var(--bg2); border-color: var(--border2); color: var(--text); }
+body.dark .notif { background: var(--bg2); border-color: var(--border); }
+body.dark pre { background: var(--bg3) !important; color: var(--text2) !important; }
+
+/* ─── AB / PROFILES / CONSISTENCY ────────────────────── */
+.ab-delta-pos { color: var(--green); font-weight: 700; }
+.ab-delta-neg { color: var(--red); font-weight: 700; }
+.ab-delta-neu { color: var(--text3); }
+.profile-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all var(--transition); }
+.profile-card:hover { border-color: var(--accent); background: var(--accent-light); }
+.profile-card.selected { border-color: var(--accent); background: var(--accent-light); }
+
+@media (max-width: 900px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .detail-inner { grid-template-columns: 1fr; }
+}
+
+/* ─── RANGE SLIDER ────────────────────────────────────── */
+input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--border2); outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1><span class="dot"></span>OfficeIQ Bench</h1>
+    <span>AI Evaluation Platform</span>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Тестирование</div>
+    <div class="nav-item active" data-page="run" onclick="nav('run',this)"><span class="icon">▷</span> Запуск</div>
+    <div class="nav-item" data-page="results" onclick="nav('results',this)"><span class="icon">◈</span> Результаты</div>
+    <div class="nav-item" data-page="compare" onclick="nav('compare',this)"><span class="icon">⇌</span> Сравнение</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Аналитика</div>
+    <div class="nav-item" data-page="leaderboard" onclick="nav('leaderboard',this)"><span class="icon">🏆</span> Leaderboard</div>
+    <div class="nav-item" data-page="trend" onclick="nav('trend',this)"><span class="icon">📈</span> Тренд</div>
+    <div class="nav-item" data-page="analytics" onclick="nav('analytics',this)"><span class="icon">◎</span> Аналитика</div>
+    <div class="nav-item" data-page="prompts" onclick="nav('prompts',this)"><span class="icon">✦</span> Промпты</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Инструменты</div>
+    <div class="nav-item" data-page="ab" onclick="nav('ab',this)"><span class="icon">⇄</span> Prompt Lab A/B</div>
+    <div class="nav-item" data-page="profiles" onclick="nav('profiles',this)"><span class="icon">◑</span> Профили</div>
+    <div class="nav-item" data-page="consistency" onclick="nav('consistency',this)"><span class="icon">⟳</span> Стабильность</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Бенчмарк</div>
+    <div class="nav-item" data-page="questions" onclick="nav('questions',this)"><span class="icon">≡</span> Вопросы</div>
+  </div>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="server-badge">
+        <div class="dot-status" id="status-dot"></div>
+        <span id="status-text">Проверка...</span>
+      </div>
+      <button class="btn btn-ghost btn-xs" onclick="toggleDark()" id="btn-dark" title="Тёмная тема" style="padding:4px 8px;font-size:16px;border:none;">☀</button>
+    </div>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: RUN                                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page active" id="page-run">
+  <div class="page-header">
+    <div class="page-title">Запуск теста</div>
+    <div class="page-sub">Добавь модели, настрой судью и запусти прогон</div>
+  </div>
+
+  <div class="grid-2" style="align-items: start;">
+    <!-- LEFT COL -->
+    <div>
+      <!-- MODELS -->
+      <div class="card mb">
+        <div class="card-label">Тестируемые модели</div>
+        <div id="models-list"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addModel()" style="margin-top:10px;">+ Добавить модель</button>
+      </div>
+
+      <!-- JUDGE -->
+      <div class="card mb">
+        <div class="card-label">Судья (LLM-as-a-judge)</div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Base URL</label>
+            <input class="form-input" id="judge-url" value="https://api.openai.com/v1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input class="form-input" type="password" id="judge-key" placeholder="sk-...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model ID</label>
+            <input class="form-input" id="judge-model" placeholder="gpt-4o">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:10px;">
+          <label class="form-label">Параллельность судьи: <span id="judge-concurrency-val" style="color:var(--accent);font-weight:700">3</span></label>
+          <input type="range" id="judge-concurrency" min="1" max="16" value="3" oninput="document.getElementById('judge-concurrency-val').textContent=this.value">
+          <div class="form-hint">Сколько оценок судья делает одновременно. Выше = быстрее, но больше нагрузки на API.</div>
+        </div>
+      </div>
+
+      <!-- OPTIONS -->
+      <div class="card mb">
+        <div class="card-label">Параметры прогона</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Лимит вопросов <span class="opt">(0 = все 100)</span></label>
+            <input class="form-input" type="number" id="cfg-limit" value="0" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Параллельность модели</label>
+            <input class="form-input" type="number" id="cfg-concurrency" value="5" min="1" max="30">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Категории <span class="opt">(пусто = все)</span></label>
+          <div class="checkbox-group">
+            <div class="checkbox-item"><input type="checkbox" id="cat-communication" value="communication"><label for="cat-communication">Коммуникация</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-meetings" value="meetings"><label for="cat-meetings">Встречи</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-documents" value="documents"><label for="cat-documents">Документы</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-analytics" value="analytics"><label for="cat-analytics">Аналитика</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-hr_team" value="hr_team"><label for="cat-hr_team">HR</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-negotiations" value="negotiations"><label for="cat-negotiations">Переговоры</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-stress" value="stress"><label for="cat-stress">Стресс</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-ethics" value="ethics"><label for="cat-ethics">Этика</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-emotional" value="emotional"><label for="cat-emotional">Эмоции</label></div>
+            <div class="checkbox-item"><input type="checkbox" id="cat-adversarial" value="adversarial"><label for="cat-adversarial">Adversarial</label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPEED FINDER -->
+      <div class="card mb">
+        <div class="card-label">Speed Finder</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">
+          Запускает мини-тест (5 вопросов) с параллелизмом 1→2→4→8 и находит оптимальную скорость для первой модели.
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-speed" onclick="runSpeedTest()" style="margin-bottom:10px;">⚡ Найти оптимальную скорость</button>
+        <div id="speed-result" style="display:none;"></div>
+      </div>
+
+      <!-- WEBHOOK -->
+      <div class="card mb">
+        <div class="card-label">Интеграции</div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Webhook URL <span class="opt">(POST при завершении)</span></label>
+          <input class="form-input" id="cfg-webhook" placeholder="https://your-n8n.com/webhook/...">
+          <div class="form-hint">При завершении прогона отправит JSON с результатами. Удобно для n8n.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="btn-run" onclick="startRun()" style="flex:1;justify-content:center;padding:11px;">▷ Запустить (100 вопросов)</button>
+        <button class="btn btn-secondary" id="btn-quick" onclick="startQuickRun()" style="padding:11px;" title="20 вопросов — быстрый прогон">⚡ Quick (20)</button>
+        <button class="btn btn-warn" id="btn-stop" onclick="stopRun()" style="display:none;padding:11px;" title="Остановить прогон">◼ Стоп</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COL: PROGRESS -->
+    <div>
+      <div class="card" id="run-idle-card">
+        <div class="empty"><div class="icon">◈</div><p>Настрой модели и нажми «Запустить»</p></div>
+      </div>
+      <div id="run-progress-card" style="display:none">
+        <div class="card mb">
+          <div class="card-label">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="spinner" id="run-spinner"></div>
+              <span id="run-phase-text">Инициализация...</span>
+            </div>
+          </div>
+          <div id="model-progress-blocks"></div>
+          <hr class="divider">
+          <div class="log" id="run-log"></div>
+        </div>
+      </div>
+      <div id="run-results-list" style="display:none">
+        <div class="card-label" style="padding:0 0 10px">Результаты прогона</div>
+        <div id="run-result-cards"></div>
+        <button class="btn btn-secondary btn-sm" onclick="nav('results', document.querySelector('[data-page=results]'))" style="margin-top:8px;width:100%;justify-content:center;">Перейти ко всем результатам →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: RESULTS                                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-results">
+  <div class="page-header">
+    <div class="page-title">Результаты</div>
+    <div class="page-sub">История всех прогонов</div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div class="tabs" id="results-tabs">
+      <div class="tab active" onclick="switchResultsTab('list',this)">Список</div>
+      <div class="tab" onclick="switchResultsTab('detail',this)">Детали</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary btn-sm" id="btn-export-csv" onclick="exportCSV()" style="display:none;">↓ CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadResults()">↻ Обновить</button>
+    </div>
+  </div>
+  <div class="tab-content active" id="results-list-tab">
+    <div id="results-list-wrap"><div class="empty"><div class="icon">◈</div><p>Загрузка...</p></div></div>
+  </div>
+  <div class="tab-content" id="results-detail-tab">
+    <div id="results-detail-wrap"><div class="empty"><div class="icon">←</div><p>Выбери прогон из списка</p></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: COMPARE                                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-compare">
+  <div class="page-header">
+    <div class="page-title">Сравнение моделей</div>
+    <div class="page-sub">Выбери прогоны для анализа — все данные в одном месте</div>
+  </div>
+
+  <div class="grid-2" style="align-items:start;margin-bottom:20px;">
+    <div class="card">
+      <div class="card-label">Выбор прогонов</div>
+      <div id="compare-list"><div class="empty"><div class="icon">◈</div><p>Загрузка...</p></div></div>
+      <div style="margin-top:14px;display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="openCompare()" style="flex:1;justify-content:center;">Сравнить выбранные</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadCompareList()">↻</button>
+      </div>
+    </div>
+    <div class="card" id="compare-radar-card" style="display:none;">
+      <div class="card-label">Радар по критериям</div>
+      <div class="chart-container"><canvas id="compare-radar"></canvas></div>
+    </div>
+  </div>
+
+  <div id="compare-result-wrap"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: QUESTIONS                                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-questions">
+  <div class="page-header">
+    <div class="page-title">Вопросы бенчмарка</div>
+    <div class="page-sub">100 вопросов · 10 категорий · офисные и управленческие задачи</div>
+  </div>
+  <div class="grid-4 mb">
+    <div class="card stat-box"><div class="val" id="q-total">—</div><div class="lbl">вопросов</div></div>
+    <div class="card stat-box"><div class="val" style="color:var(--green)" id="q-easy">—</div><div class="lbl">лёгких</div></div>
+    <div class="card stat-box"><div class="val" style="color:var(--yellow)" id="q-medium">—</div><div class="lbl">средних</div></div>
+    <div class="card stat-box"><div class="val" style="color:var(--red)" id="q-hard">—</div><div class="lbl">сложных</div></div>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+    <select class="form-select" id="q-filter-cat" onchange="filterQuestions()" style="width:auto;">
+      <option value="">Все категории</option>
+      <option value="communication">Коммуникация</option>
+      <option value="meetings">Встречи</option>
+      <option value="documents">Документы</option>
+      <option value="analytics">Аналитика</option>
+      <option value="hr_team">HR и команда</option>
+      <option value="negotiations">Переговоры</option>
+      <option value="stress">Стресс</option>
+      <option value="ethics">Этика</option>
+      <option value="emotional">Эмоции</option>
+      <option value="adversarial">Adversarial</option>
+    </select>
+    <select class="form-select" id="q-filter-diff" onchange="filterQuestions()" style="width:auto;">
+      <option value="">Все сложности</option>
+      <option value="easy">Лёгкие</option>
+      <option value="medium">Средние</option>
+      <option value="hard">Сложные</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Категория</th><th>Сложность</th><th>Запрос</th><th></th></tr></thead>
+      <tbody id="q-table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: LEADERBOARD                                      -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-leaderboard">
+  <div class="page-header">
+    <div class="page-title">Leaderboard</div>
+    <div class="page-sub">Все прогоны отсортированы по итоговому баллу</div>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;">
+    <select class="form-select" id="lb-filter-mode" onchange="renderLeaderboard()" style="width:auto;">
+      <option value="">Все режимы</option>
+      <option value="full">Full (100 вопросов)</option>
+      <option value="quick">Quick (20 вопросов)</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="loadResults();renderLeaderboard()">↻</button>
+  </div>
+  <div id="leaderboard-wrap"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: TREND                                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-trend">
+  <div class="page-header">
+    <div class="page-title">Тренд прогресса</div>
+    <div class="page-sub">Как менялся балл модели по итерациям</div>
+  </div>
+  <div class="card mb">
+    <div class="card-label">Выбери модель для отслеживания</div>
+    <select class="form-select" id="trend-model-select" onchange="renderTrend()" style="max-width:400px;">
+      <option value="">— выбери модель —</option>
+    </select>
+  </div>
+  <div id="trend-wrap"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: ANALYTICS                                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-analytics">
+  <div class="page-header">
+    <div class="page-title">Аналитика прогона</div>
+    <div class="page-sub">Response Analytics · Failure Clustering · паттерны ответов</div>
+  </div>
+  <div class="card mb">
+    <div class="card-label">Выбери прогон</div>
+    <select class="form-select" id="analytics-run-select" onchange="loadAnalytics()" style="max-width:500px;">
+      <option value="">— выбери прогон —</option>
+    </select>
+  </div>
+  <div id="analytics-wrap"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: PROMPTS                                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-prompts">
+  <div class="page-header">
+    <div class="page-title">Рекомендации для промпта</div>
+    <div class="page-sub">Конкретные фразы для улучшения системного промпта по результатам прогона</div>
+  </div>
+  <div class="card mb">
+    <div class="card-label">Выбери прогон</div>
+    <select class="form-select" id="prompts-run-select" onchange="loadPromptRecs()" style="max-width:500px;">
+      <option value="">— выбери прогон —</option>
+    </select>
+  </div>
+  <div id="prompts-wrap"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: PROMPT LAB A/B                                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-ab">
+  <div class="page-header">
+    <div class="page-title">Prompt Lab A/B</div>
+    <div class="page-sub">Сравни два системных промпта на одной модели — найди что реально улучшает результат</div>
+  </div>
+
+  <div class="grid-2" style="align-items:start;">
+    <div>
+      <!-- MODEL CONFIG -->
+      <div class="card mb">
+        <div class="card-label">Модель</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Base URL</label>
+            <input class="form-input" id="ab-url" value="https://api.openai.com/v1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model ID</label>
+            <input class="form-input" id="ab-model" placeholder="gpt-4o-mini">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">API Key</label>
+          <input class="form-input" type="password" id="ab-key" placeholder="sk-...">
+        </div>
+      </div>
+
+      <!-- PROMPTS -->
+      <div class="card mb">
+        <div class="card-label">Промпт A (текущий)</div>
+        <textarea class="form-textarea" id="ab-prompt-a" placeholder="Текущий системный промпт..." style="min-height:120px;font-family:monospace;font-size:12px;"></textarea>
+      </div>
+      <div class="card mb">
+        <div class="card-label">Промпт B (новая версия)</div>
+        <textarea class="form-textarea" id="ab-prompt-b" placeholder="Улучшенный системный промпт..." style="min-height:120px;font-family:monospace;font-size:12px;"></textarea>
+      </div>
+
+      <!-- OPTIONS -->
+      <div class="card mb">
+        <div class="card-label">Режим тестирования</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="radio" name="ab-mode" value="quick" checked style="accent-color:var(--accent);"> Quick (20 вопросов)
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="radio" name="ab-mode" value="full"> Full (100 вопросов)
+          </label>
+        </div>
+      </div>
+
+      <!-- JUDGE -->
+      <div class="card mb">
+        <div class="card-label">Судья</div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Base URL</label>
+            <input class="form-input" id="ab-judge-url" value="https://api.openai.com/v1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input class="form-input" type="password" id="ab-judge-key" placeholder="sk-...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model ID</label>
+            <input class="form-input" id="ab-judge-model" placeholder="gpt-4o">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="btn-ab-run" onclick="startAB()" style="flex:1;justify-content:center;padding:11px;">⇄ Запустить A/B тест</button>
+        <button class="btn btn-warn" id="btn-ab-stop" onclick="stopAB()" style="display:none;padding:11px;">◼ Стоп</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: PROGRESS + RESULTS -->
+    <div>
+      <div class="card" id="ab-idle-card">
+        <div class="empty"><div class="icon">⇄</div><p>Заполни промпты и запусти тест</p></div>
+      </div>
+      <div id="ab-progress-card" style="display:none;">
+        <div class="card mb">
+          <div class="card-label">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="spinner" id="ab-spinner"></div>
+              <span id="ab-phase-text">Инициализация...</span>
+            </div>
+          </div>
+          <div class="log" id="ab-log"></div>
+        </div>
+      </div>
+      <div id="ab-result-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: COMPANY PROFILES                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-profiles">
+  <div class="page-header">
+    <div class="page-title">Профили требований</div>
+    <div class="page-sub">Пересчитай итоговый балл с весами под конкретный сценарий использования</div>
+  </div>
+
+  <div class="grid-4 mb">
+    <div class="profile-card" onclick="selectProfile('hr')" id="profile-hr">
+      <div style="font-size:1.5rem;margin-bottom:8px;">👥</div>
+      <div style="font-weight:700;margin-bottom:4px;">HR-ассистент</div>
+      <div style="font-size:11px;color:var(--text3);">HR, Эмоции, Этика — в приоритете</div>
+    </div>
+    <div class="profile-card" onclick="selectProfile('sales')" id="profile-sales">
+      <div style="font-size:1.5rem;margin-bottom:8px;">💼</div>
+      <div style="font-weight:700;margin-bottom:4px;">Sales-ассистент</div>
+      <div style="font-size:11px;color:var(--text3);">Переговоры, Коммуникация — в приоритете</div>
+    </div>
+    <div class="profile-card" onclick="selectProfile('pm')" id="profile-pm">
+      <div style="font-size:1.5rem;margin-bottom:8px;">📋</div>
+      <div style="font-weight:700;margin-bottom:4px;">PM-ассистент</div>
+      <div style="font-size:11px;color:var(--text3);">Встречи, Аналитика, Стресс — в приоритете</div>
+    </div>
+    <div class="profile-card" onclick="selectProfile('custom')" id="profile-custom">
+      <div style="font-size:1.5rem;margin-bottom:8px;">⚙</div>
+      <div style="font-weight:700;margin-bottom:4px;">Свой профиль</div>
+      <div style="font-size:11px;color:var(--text3);">Настрой веса самостоятельно</div>
+    </div>
+  </div>
+
+  <!-- CUSTOM WEIGHTS -->
+  <div class="card mb" id="custom-weights-card" style="display:none;">
+    <div class="card-label">Веса категорий (сумма не обязательно = 100)</div>
+    <div id="custom-weights-inputs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;"></div>
+  </div>
+
+  <!-- RUN SELECTOR -->
+  <div class="card mb">
+    <div class="card-label">Выбери прогоны для пересчёта</div>
+    <div id="profiles-runs-list"></div>
+  </div>
+
+  <div id="profiles-result-wrap"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE: CONSISTENCY TEST                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-consistency">
+  <div class="page-header">
+    <div class="page-title">Тест стабильности</div>
+    <div class="page-sub">Запускает одни и те же 5 вопросов трижды — показывает насколько модель стабильна</div>
+  </div>
+
+  <div class="grid-2" style="align-items:start;">
+    <div>
+      <div class="card mb">
+        <div class="card-label">Модель</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Base URL</label>
+            <input class="form-input" id="cs-url" value="https://api.openai.com/v1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model ID</label>
+            <input class="form-input" id="cs-model" placeholder="gpt-4o-mini">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">API Key</label>
+          <input class="form-input" type="password" id="cs-key" placeholder="sk-...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Системный промпт <span class="opt">(опционально)</span></label>
+          <textarea class="form-textarea" id="cs-sysprompt" style="min-height:60px;"></textarea>
+        </div>
+      </div>
+      <div class="card mb">
+        <div class="card-label">Судья</div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Base URL</label>
+            <input class="form-input" id="cs-judge-url" value="https://api.openai.com/v1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input class="form-input" type="password" id="cs-judge-key" placeholder="sk-...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model ID</label>
+            <input class="form-input" id="cs-judge-model" placeholder="gpt-4o">
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-cs-run" onclick="startConsistency()" style="width:100%;justify-content:center;padding:11px;">⟳ Запустить тест стабильности</button>
+    </div>
+    <div>
+      <div class="card" id="cs-idle-card">
+        <div class="empty"><div class="icon">⟳</div><p>Запусти тест — 3 прогона × 5 вопросов</p></div>
+      </div>
+      <div id="cs-progress-card" style="display:none;">
+        <div class="card mb">
+          <div class="card-label"><div style="display:flex;gap:8px;align-items:center;"><div class="spinner" id="cs-spinner"></div><span id="cs-phase-text">Инициализация...</span></div></div>
+          <div class="log" id="cs-log"></div>
+        </div>
+      </div>
+      <div id="cs-result-wrap"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- JS                                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<script>
+const CAT = {
+  communication:'Коммуникация', meetings:'Встречи', documents:'Документы',
+  analytics:'Аналитика', hr_team:'HR и команда', negotiations:'Переговоры',
+  stress:'Стресс', ethics:'Этика', emotional:'Эмоции', adversarial:'Adversarial'
+};
+const CRIT = {
+  accuracy:'Точность', completeness:'Полнота', instruction_following:'Инструкция',
+  practicality:'Практичность', tone_style:'Тон', structure:'Структура',
+  conciseness:'Краткость', safety:'Безопасность', ethical_soundness:'Этика', autonomy:'Самост.'
+};
+const COLORS = ['#4f6ef7','#e84393','#0ea5e9','#f97316','#8b5cf6','#10b981'];
+
+let allQuestions = [];
+let allResults = [];
+let compareChart = null;
+let modelCounter = 0;
+let runProgState = {};
+let activeWs = null;
+
+// ─── SCORE COLOR ────────────────────────────────────────────
+function sc(s) {
+  if (s >= 8) return 'var(--green)';
+  if (s >= 6) return 'var(--yellow)';
+  if (s >= 4) return 'var(--orange)';
+  return 'var(--red)';
+}
+function scBg(s) {
+  if (s >= 8) return 'var(--green-light)';
+  if (s >= 6) return 'var(--yellow-light)';
+  if (s >= 4) return 'var(--orange-light)';
+  return 'var(--red-light)';
+}
+function pill(s) {
+  return `<span class="score-pill" style="background:${scBg(s)};color:${sc(s)}">${(+s).toFixed(1)}</span>`;
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── NAV ─────────────────────────────────────────────────────
+function nav(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if (el) el.classList.add('active');
+  if (page==='results') loadResults();
+  if (page==='compare') loadCompareList();
+  if (page==='questions') loadQuestions();
+  if (page==='leaderboard') { loadResults().then(renderLeaderboard); }
+  if (page==='trend') { loadResults().then(populateTrendSelect); }
+  if (page==='analytics') { loadResults().then(populateAnalyticsSelect); }
+  if (page==='prompts') { loadResults().then(populatePromptsSelect); }
+  if (page==='profiles') { loadResults().then(() => { populatePromptsSelect(); renderProfileResults(); }); }
+  if (page==='ab') {
+    const jk = document.getElementById('judge-key')?.value;
+    const jm = document.getElementById('judge-model')?.value;
+    const ju = document.getElementById('judge-url')?.value;
+    if (jk && !document.getElementById('ab-judge-key').value) document.getElementById('ab-judge-key').value = jk;
+    if (jm && !document.getElementById('ab-judge-model').value) document.getElementById('ab-judge-model').value = jm;
+    if (ju) document.getElementById('ab-judge-url').value = ju;
+  }
+  if (page==='consistency') {
+    const jk = document.getElementById('judge-key')?.value;
+    const jm = document.getElementById('judge-model')?.value;
+    const ju = document.getElementById('judge-url')?.value;
+    if (jk && !document.getElementById('cs-judge-key').value) document.getElementById('cs-judge-key').value = jk;
+    if (jm && !document.getElementById('cs-judge-model').value) document.getElementById('cs-judge-model').value = jm;
+    if (ju) document.getElementById('cs-judge-url').value = ju;
+  }
+}
+
+// ─── NOTIFY ─────────────────────────────────────────────────
+function notify(msg, type='ok') {
+  const el = document.createElement('div');
+  el.className = `notif ${type}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ─── MULTI-MODEL ─────────────────────────────────────────────
+function addModel() {
+  modelCounter++;
+  const idx = modelCounter;
+  const wrap = document.getElementById('models-list');
+  const div = document.createElement('div');
+  div.className = 'model-config-card';
+  div.id = `model-card-${idx}`;
+  div.innerHTML = `
+    <div class="model-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="model-num">${wrap.children.length + 1}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">Модель ${wrap.children.length + 1}</span>
+      </div>
+      <button class="btn btn-ghost btn-xs" onclick="removeModel(${idx})">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Название</label>
+      <input class="form-input" id="m${idx}-name" placeholder="GPT-4o mini">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Base URL</label>
+        <input class="form-input" id="m${idx}-url" value="https://api.openai.com/v1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Model ID</label>
+        <input class="form-input" id="m${idx}-model" placeholder="gpt-4o-mini">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">API Key</label>
+      <input class="form-input" type="password" id="m${idx}-key" placeholder="sk-...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Системный промпт <span class="opt">(опционально)</span></label>
+      <textarea class="form-textarea" id="m${idx}-sysprompt" placeholder="Ты — офисный ассистент..." style="min-height:52px;"></textarea>
+    </div>`;
+  wrap.appendChild(div);
+  renumberModels();
+}
+
+function removeModel(idx) {
+  const el = document.getElementById(`model-card-${idx}`);
+  if (el) el.remove();
+  renumberModels();
+}
+
+function renumberModels() {
+  const cards = document.querySelectorAll('#models-list .model-config-card');
+  cards.forEach((card, i) => {
+    const num = card.querySelector('.model-num');
+    if (num) num.textContent = i + 1;
+  });
+}
+
+function getModels() {
+  const cards = document.querySelectorAll('#models-list .model-config-card');
+  return [...cards].map(card => {
+    const id = card.id.replace('model-card-','');
+    return {
+      name: document.getElementById(`m${id}-name`)?.value.trim() || document.getElementById(`m${id}-model`)?.value.trim() || 'model',
+      base_url: document.getElementById(`m${id}-url`)?.value.trim() || 'https://api.openai.com/v1',
+      api_key: document.getElementById(`m${id}-key`)?.value.trim() || '',
+      model: document.getElementById(`m${id}-model`)?.value.trim() || '',
+      system_prompt: document.getElementById(`m${id}-sysprompt`)?.value.trim() || null,
+      concurrency: parseInt(document.getElementById('cfg-concurrency')?.value) || 5,
+    };
+  });
+}
+
+// ─── SPEED TEST ───────────────────────────────────────────────
+async function runSpeedTest() {
+  const models = getModels();
+  if (!models.length) { notify('Добавь хотя бы одну модель', 'err'); return; }
+  const m = models[0];
+  if (!m.api_key || !m.model) { notify('Заполни ключ и ID первой модели', 'err'); return; }
+
+  const btn = document.getElementById('btn-speed');
+  btn.disabled = true;
+  btn.textContent = '⏳ Тестируем...';
+  document.getElementById('speed-result').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/speed-test', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ model: m })
+    });
+    const data = await res.json();
+    if (data.error) { notify(data.error, 'err'); return; }
+
+    const recConc = data.recommended_concurrency;
+    document.getElementById('cfg-concurrency').value = recConc;
+
+    let rows = data.results.map(r => {
+      if (r.error) return `<div class="speed-result-row"><span style="width:60px;font-weight:600">×${r.concurrency}</span><span style="color:var(--red)">${r.error.slice(0,60)}</span></div>`;
+      const isBest = r.concurrency === recConc;
+      return `<div class="speed-result-row" style="${isBest ? 'background:var(--accent-light);border-radius:6px;padding:8px;' : ''}">
+        <span style="width:60px;font-weight:700;color:${isBest?'var(--accent)':'var(--text2)'}">×${r.concurrency}</span>
+        <span style="flex:1;color:var(--text2)">${r.throughput_qps} вопр/сек · ${r.avg_latency_ms}мс avg · ${r.elapsed_s}с</span>
+        ${isBest ? '<span class="badge badge-accent">✓ Лучший</span>' : ''}
+      </div>`;
+    }).join('');
+
+    document.getElementById('speed-result').style.display = 'block';
+    document.getElementById('speed-result').innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;">${esc(data.summary)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Параллельность автоматически установлена: <b>${recConc}</b></div>
+      ${rows}`;
+
+    notify(`Оптимально: ${recConc} потоков`, 'ok');
+  } catch(e) {
+    notify('Ошибка Speed Test: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Найти оптимальную скорость';
+  }
+}
+
+// ─── RUN ─────────────────────────────────────────────────────
+function startQuickRun() {
+  document.getElementById('cfg-limit').value = '0';
+  document.querySelectorAll('.checkbox-group input').forEach(c => c.checked = false);
+  startRun('quick');
+}
+
+function startRun(mode) {
+  mode = mode || 'full';
+  const models = getModels();
+  if (!models.length) { notify('Добавь хотя бы одну модель', 'err'); return; }
+  for (const m of models) {
+    if (!m.api_key || !m.model) { notify('Заполни ключ и ID для каждой модели', 'err'); return; }
+  }
+  const judgeKey = document.getElementById('judge-key').value.trim();
+  const judgeModel = document.getElementById('judge-model').value.trim();
+  const judgeUrl = document.getElementById('judge-url').value.trim();
+  if (!judgeKey || !judgeModel) { notify('Заполни судью', 'err'); return; }
+
+  const limit = parseInt(document.getElementById('cfg-limit').value) || 0;
+  const cats = [...document.querySelectorAll('.checkbox-group input:checked')].map(c => c.value);
+  const judgeConc = parseInt(document.getElementById('judge-concurrency').value) || 3;
+
+  const webhookUrl = document.getElementById('cfg-webhook')?.value.trim() || null;
+  const payload = {
+    models, judge_key: judgeKey, judge_model: judgeModel, judge_base_url: judgeUrl,
+    judge_concurrency: judgeConc,
+    limit: mode === 'quick' ? null : (limit || null),
+    categories: mode === 'quick' ? null : (cats.length ? cats : null),
+    webhook_url: webhookUrl || null,
+    mode,
+  };
+
+  document.getElementById('run-idle-card').style.display = 'none';
+  document.getElementById('run-results-list').style.display = 'none';
+  document.getElementById('run-progress-card').style.display = 'block';
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('btn-quick').disabled = true;
+  document.getElementById('btn-stop').style.display = '';
+  document.getElementById('run-log').innerHTML = '';
+  document.getElementById('run-phase-text').textContent = 'Инициализация...';
+  document.getElementById('run-spinner').style.display = '';
+  runProgState = {};
+
+  const mbEl = document.getElementById('model-progress-blocks');
+  mbEl.innerHTML = models.map((m, i) => `
+    <div class="model-progress-block" id="mpb-${i}">
+      <div class="model-progress-name">
+        <span class="model-num" style="background:${COLORS[i%COLORS.length]}">${i+1}</span>
+        ${esc(m.name || m.model)}
+        <span id="mpb-status-${i}" style="margin-left:auto;font-size:11px;color:var(--text3)">Ожидание</span>
+      </div>
+      <div class="prog-row">
+        <span class="prog-label">Опрос модели</span>
+        <div class="progress-wrap" style="flex:1"><div class="progress-bar" id="mpb-q-${i}" style="width:0%"></div></div>
+        <span class="prog-val" id="mpb-q-lbl-${i}">0/—</span>
+      </div>
+      <div class="prog-row">
+        <span class="prog-label">Оценка судьи</span>
+        <div class="progress-wrap" style="flex:1"><div class="progress-bar green" id="mpb-j-${i}" style="width:0%"></div></div>
+        <span class="prog-val" id="mpb-j-lbl-${i}">0/—</span>
+      </div>
+      <div id="mpb-stats-${i}" style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text3);"></div>
+      <div id="mpb-preview-${i}" style="margin-top:8px;font-size:11px;color:var(--text2);background:var(--bg3);border-radius:6px;padding:7px 10px;display:none;font-style:italic;line-height:1.5;"></div>
+    </div>`).join('');
+
+  const ws = new WebSocket(`ws://${location.host}/ws/run`);
+  activeWs = ws;
+  ws.onopen = () => { ws.send(JSON.stringify(payload)); logLine('Соединение установлено', 'ok'); };
+  ws.onmessage = e => handleMsg(JSON.parse(e.data), models.length);
+  ws.onerror = () => { logLine('Ошибка WebSocket', 'err'); notify('Ошибка соединения', 'err'); doneRun(); };
+  ws.onclose = () => { activeWs = null; };
+}
+
+function stopRun() {
+  if (activeWs && activeWs.readyState === WebSocket.OPEN) {
+    activeWs.send(JSON.stringify({ type: 'cancel' }));
+    logLine('⏹ Запрос на остановку отправлен...', 'warn');
+    document.getElementById('btn-stop').disabled = true;
+  }
+}
+
+function handleMsg(msg, totalModels) {
+  const { event, model_idx } = msg;
+  const i = model_idx ?? 0;
+
+  if (event === 'start') {
+    logLine(`▶ Запуск: ${msg.total_models} модел(и) · ${msg.total_questions} вопросов`, 'phase');
+  }
+  if (event === 'model_start') {
+    document.getElementById('run-phase-text').textContent = `[${msg.model_name}] Опрос...`;
+    document.getElementById(`mpb-status-${i}`).textContent = 'Опрос...';
+    logLine(`▷ [${msg.model_name}] Старт — ${msg.total} вопросов`, 'phase');
+    if (!runProgState[i]) runProgState[i] = { qTotal: msg.total, jTotal: msg.total };
+  }
+  if (event === 'response') {
+    const t = runProgState[i]?.qTotal || msg.total;
+    const pct = Math.round(msg.done / t * 100);
+    const bar = document.getElementById(`mpb-q-${i}`);
+    const lbl = document.getElementById(`mpb-q-lbl-${i}`);
+    if (bar) bar.style.width = pct + '%';
+    if (lbl) lbl.textContent = `${msg.done}/${t}`;
+
+    if (!runProgState[i]) runProgState[i] = {};
+    runProgState[i].errors = (runProgState[i].errors || 0) + (msg.error ? 1 : 0);
+    runProgState[i].latencies = runProgState[i].latencies || [];
+    if (!msg.error) runProgState[i].latencies.push(msg.latency_ms);
+
+    const statsEl = document.getElementById(`mpb-stats-${i}`);
+    if (statsEl) {
+      const errCount = runProgState[i].errors || 0;
+      const lats = runProgState[i].latencies || [];
+      const avgLat = lats.length ? Math.round(lats.slice(-10).reduce((a,b)=>a+b,0)/Math.min(lats.length,10)) : 0;
+      const remaining = t - msg.done;
+      const eta = avgLat && remaining ? Math.round(remaining * avgLat / 1000) : null;
+      statsEl.innerHTML = [
+        errCount ? `<span style="color:var(--orange)">✗ ${errCount} ошибок</span>` : '<span style="color:var(--green)">✓ без ошибок</span>',
+        avgLat ? `<span>avg ${avgLat}мс</span>` : '',
+        eta ? `<span>ETA ~${eta}с</span>` : '',
+        msg.attempts > 1 ? `<span style="color:var(--yellow)">попытка ${msg.attempts}</span>` : '',
+      ].filter(Boolean).join(' · ');
+    }
+
+    if (msg.preview) {
+      const prevEl = document.getElementById(`mpb-preview-${i}`);
+      if (prevEl) {
+        prevEl.style.display = 'block';
+        prevEl.innerHTML = `<span style="color:var(--text3);font-style:normal;font-weight:600;">${msg.question_id}</span> → ${esc(msg.preview)}`;
+      }
+    }
+
+    if (msg.error) logLine(`✗ [${msg.question_id}] ${msg.error}${msg.attempts > 1 ? ` (попытка ${msg.attempts})` : ''}`, 'err');
+    else logLine(`✓ [${msg.question_id}] ${msg.latency_ms}мс${msg.attempts > 1 ? ` (попытка ${msg.attempts})` : ''}`, 'ok');
+  }
+  if (event === 'phase') {
+    document.getElementById('run-phase-text').textContent = msg.message;
+    if (msg.phase === 'judging') {
+      const s = document.getElementById(`mpb-status-${i}`);
+      if (s) s.textContent = 'Оценка...';
+    }
+    logLine(`⟶ ${msg.message}`, 'phase');
+  }
+  if (event === 'score') {
+    const t = runProgState[i]?.jTotal || msg.total;
+    const pct = Math.round(msg.done / t * 100);
+    const bar = document.getElementById(`mpb-j-${i}`);
+    const lbl = document.getElementById(`mpb-j-lbl-${i}`);
+    if (bar) bar.style.width = pct + '%';
+    if (lbl) lbl.textContent = `${msg.done}/${t}`;
+    if (msg.error) logLine(`⚠ judge err [${msg.question_id}]: ${msg.error}`, 'warn');
+  }
+  if (event === 'concurrency_reduced') {
+    logLine(`⚠ ${msg.message}`, 'warn');
+    notify(msg.message, 'warn');
+  }
+  if (event === 'model_done') {
+    const s = document.getElementById(`mpb-status-${i}`);
+    if (s) s.innerHTML = `<span style="color:var(--green);font-weight:700;">${msg.overall_score.toFixed(2)}</span>`;
+    const bar = document.getElementById(`mpb-q-${i}`);
+    const jbar = document.getElementById(`mpb-j-${i}`);
+    if (bar) bar.style.width = '100%';
+    if (jbar) jbar.style.width = '100%';
+    const prevEl = document.getElementById(`mpb-preview-${i}`);
+    if (prevEl) prevEl.style.display = 'none';
+
+    const coverageStr = msg.coverage !== undefined && msg.coverage !== msg.total
+      ? ` · покрытие ${msg.coverage}/${msg.total}`
+      : '';
+    const skippedStr = msg.skipped?.length ? ` · пропущено ${msg.skipped.length}` : '';
+    logLine(`✓ [${msg.model_name}] Готово — ${msg.overall_score.toFixed(2)}/10${coverageStr}${skippedStr}`, 'done');
+
+    if (msg.skipped?.length) {
+      logLine(`  Пропущенные вопросы: ${msg.skipped.join(', ')}`, 'warn');
+    }
+
+    const resEl = document.getElementById('run-results-list');
+    resEl.style.display = 'block';
+    const cardsEl = document.getElementById('run-result-cards');
+    const div = document.createElement('div');
+    div.className = 'card mb';
+    div.style.borderLeft = `3px solid ${COLORS[i % COLORS.length]}`;
+
+    const skippedBadge = msg.skipped?.length
+      ? `<span class="badge" style="background:var(--orange-light);color:var(--orange);margin-left:8px;">⚠ ${msg.skipped.length} пропущено</span>`
+      : '';
+
+    const fixesHtml = msg.prompt_fixes?.length
+      ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+           <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Рекомендации для промпта</div>
+           ${msg.prompt_fixes.map(f => `
+             <div style="font-size:12px;margin-bottom:6px;display:flex;gap:8px;align-items:flex-start;">
+               <span class="badge badge-accent" style="flex-shrink:0;">${CAT[f.category]||f.category}</span>
+               <span style="color:var(--text2);font-family:monospace;background:var(--bg3);padding:3px 8px;border-radius:4px;font-size:11px;">${esc(f.fix)}</span>
+             </div>`).join('')}
+         </div>`
+      : '';
+
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="font-size:2rem;font-weight:800;color:${sc(msg.overall_score)}">${msg.overall_score.toFixed(2)}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:14px;">${esc(msg.model_name)}${skippedBadge}</div>
+          <div style="font-size:11px;color:var(--text3);">${msg.answered}/${msg.total} ответов · покрытие ${msg.coverage ?? msg.answered}/${msg.total}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="window.open('/api/results/${esc(msg.filename.replace('.json',''))}/report','_blank')">Отчёт</button>
+      </div>
+      <div style="margin-top:12px;">
+        ${Object.entries(msg.category_scores).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>`
+        <div class="cat-bar-row">
+          <span class="cat-bar-label">${CAT[cat]||cat}</span>
+          <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${val*10}%;background:${sc(val)}"></div></div>
+          <span class="cat-bar-val" style="color:${sc(val)}">${val.toFixed(1)}</span>
+        </div>`).join('')}
+      </div>
+      ${fixesHtml}`;
+    cardsEl.appendChild(div);
+    loadResults();
+  }
+  if (event === 'all_done') {
+    document.getElementById('run-phase-text').textContent = 'Все модели протестированы!';
+    document.getElementById('run-spinner').style.display = 'none';
+    logLine('✅ Все прогоны завершены', 'done');
+    doneRun();
+    launchConfetti();
+  }
+  if (event === 'cancelled') {
+    document.getElementById('run-phase-text').textContent = 'Прогон остановлен';
+    document.getElementById('run-spinner').style.display = 'none';
+    logLine(`⏹ ${msg.message}`, 'warn');
+    notify('Прогон остановлен', 'warn');
+    doneRun();
+  }
+  if (event === 'error') {
+    logLine(`💥 Ошибка: ${msg.message}`, 'err');
+    notify('Ошибка: ' + msg.message, 'err');
+    doneRun();
+  }
+}
+
+function doneRun() {
+  document.getElementById('btn-run').disabled = false;
+  document.getElementById('btn-quick').disabled = false;
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('btn-stop').disabled = false;
+  document.getElementById('run-spinner').style.display = 'none';
+  activeWs = null;
+}
+
+function logLine(text, cls='') {
+  const log = document.getElementById('run-log');
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + cls;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ─── RESULTS ─────────────────────────────────────────────────
+async function loadResults() {
+  const res = await fetch('/api/results');
+  allResults = await res.json();
+  renderResultsList();
+  document.getElementById('btn-export-csv').style.display = allResults.length ? '' : 'none';
+  return allResults;
+}
+
+function renderResultsList() {
+  const wrap = document.getElementById('results-list-wrap');
+  if (!allResults.length) {
+    wrap.innerHTML = '<div class="empty"><div class="icon">◈</div><p>Нет прогонов</p></div>';
+    return;
+  }
+  wrap.innerHTML = `<div class="card">${allResults.map(r => {
+    const modeBadge = r.mode === 'quick' ? '<span class="badge" style="background:var(--yellow-light);color:var(--yellow);margin-left:6px;">Quick</span>' : '';
+    const skippedBadge = r.skipped?.length ? `<span class="badge" style="background:var(--orange-light);color:var(--orange);margin-left:6px;">⚠ ${r.skipped.length} пропущено</span>` : '';
+    const retryBtn = r.skipped?.length
+      ? `<button class="btn btn-warn btn-xs" onclick="retrySkipped('${r.filename}',${JSON.stringify(r.skipped)})">↺ Допрогнать</button>`
+      : '';
+    return `<div class="result-item">
+      <div class="result-score" style="color:${sc(r.overall_score)}">${r.overall_score.toFixed(1)}</div>
+      <div class="result-info">
+        <div class="result-name">${esc(r.model_name)}${modeBadge}${skippedBadge}</div>
+        <div class="result-meta">${r.answered}/${r.total_questions} вопросов · ${r.run_at.slice(0,16).replace('T',' ')}</div>
+      </div>
+      <div class="result-actions">
+        ${retryBtn}
+        <button class="btn btn-secondary btn-sm" onclick="viewResult('${r.filename}')">Детали</button>
+        <button class="btn btn-ghost btn-sm" onclick="window.open('/api/results/${r.filename.replace('.json','')}/report','_blank')">Отчёт</button>
+        <button class="btn btn-ghost btn-xs" onclick="exportMarkdown('${r.filename}')" title="Экспорт в Markdown">↓ MD</button>
+        <button class="btn btn-ghost btn-xs" onclick="downloadCertificate('${r.filename}')" title="Скачать сертификат">🎓</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteResult('${r.filename}')">✕</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function viewResult(filename) {
+  switchResultsTab('detail', document.querySelectorAll('#results-tabs .tab')[1]);
+  const res = await fetch(`/api/results/${filename}`);
+  const data = await res.json();
+  renderResultDetail(data);
+}
+
+function renderResultDetail(data) {
+  const wrap = document.getElementById('results-detail-wrap');
+  const s = data.summary; const m = data.meta;
+  const radarId = 'radar-' + Date.now();
+  const critKeys = Object.keys(CRIT);
+
+  const coverage = m.coverage ?? m.answered;
+  const skippedList = m.skipped || [];
+  const modeBadge = m.mode === 'quick' ? '<span class="badge" style="background:var(--yellow-light);color:var(--yellow);margin-left:8px;">Quick</span>' : '';
+
+  wrap.innerHTML = `
+  <div class="grid-3 mb">
+    <div class="card stat-box"><div class="val" style="color:${sc(s.overall_score)}">${s.overall_score.toFixed(2)}</div><div class="lbl">итоговый балл${modeBadge}</div></div>
+    <div class="card stat-box"><div class="val">${coverage}/${m.total_questions}</div><div class="lbl">охват ${skippedList.length ? `<span style="color:var(--orange)">(${skippedList.length} пропущено)</span>` : ''}</div></div>
+    <div class="card stat-box"><div class="val">${m.run_at.slice(0,10)}</div><div class="lbl">дата</div></div>
+  </div>
+  <div class="grid-2 mb">
+    <div class="card">
+      <div class="card-label">По категориям</div>
+      ${Object.entries(s.category_scores).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>`
+      <div class="cat-bar-row">
+        <span class="cat-bar-label">${CAT[cat]||cat}</span>
+        <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${val*10}%;background:${sc(val)}"></div></div>
+        <span class="cat-bar-val" style="color:${sc(val)}">${val.toFixed(1)}</span>
+      </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-label">По критериям</div>
+      <div class="chart-container"><canvas id="${radarId}"></canvas></div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Кат.</th><th>Слож.</th><th>Запрос</th><th>Балл</th><th>мс</th><th></th></tr></thead>
+      <tbody>${data.items.map(item => `
+        <tr class="expandable" onclick="toggleRow('d-${item.id}')">
+          <td style="color:var(--text3);font-size:11px">${item.id}</td>
+          <td><span class="badge badge-accent">${CAT[item.category]||item.category}</span></td>
+          <td><span class="badge badge-${item.difficulty}">${item.difficulty}</span></td>
+          <td style="max-width:280px;color:var(--text)">${esc(item.prompt.trim().slice(0,80))}${item.prompt.length>80?'…':''}</td>
+          <td>${pill(item.weighted_total)}</td>
+          <td style="color:var(--text3);font-size:12px">${item.latency_ms}</td>
+          <td style="color:var(--text3);">▾</td>
+        </tr>
+        <tr id="d-${item.id}" style="display:none;" class="detail-row">
+          <td colspan="7">
+            <div class="detail-inner">
+              <div>
+                <div class="detail-section-label">Запрос</div>
+                <div class="detail-section-text">${esc(item.prompt.trim())}</div>
+                ${item.ideal_answer ? `<div style="margin-top:12px;"><div class="detail-section-label" style="color:var(--accent);">Идеальный ответ (по мнению судьи)</div><div class="detail-section-text" style="color:var(--accent);background:var(--accent-light);padding:8px;border-radius:6px;margin-top:4px;">${esc(item.ideal_answer)}</div></div>` : ''}
+                ${item.prompt_fix ? `<div style="margin-top:8px;"><div class="detail-section-label" style="color:var(--green);">Рекомендация для промпта</div><div style="font-size:12px;font-family:monospace;background:var(--green-light);color:var(--green);padding:8px;border-radius:6px;margin-top:4px;">${esc(item.prompt_fix)}</div></div>` : ''}
+              </div>
+              <div>
+                <div class="detail-section-label">Ответ модели ${item.skipped ? '<span style="color:var(--orange);">⚠ пропущен</span>' : ''}</div>
+                <div class="detail-section-text">${esc((item.response||'[нет ответа]').slice(0,600))}</div>
+                <div class="scores-chips">${Object.entries(item.scores||{}).map(([k,v])=>`<span class="score-chip" style="color:${sc(v)};border-color:${scBg(v)};background:${scBg(v)}"><b>${v}</b> ${CRIT[k]||k}</span>`).join('')}</div>
+                ${item.analysis ? `<div style="font-size:11px;color:var(--text2);margin-top:8px;background:var(--bg3);padding:8px;border-radius:6px;"><b style="color:var(--text3);">Анализ судьи:</b> ${esc(item.analysis)}</div>` : ''}
+                ${item.reasoning?.strengths?`<div style="font-size:11px;color:var(--green);margin-top:6px">+ ${esc(item.reasoning.strengths)}</div>`:''}
+                ${item.reasoning?.weaknesses?`<div style="font-size:11px;color:var(--orange)">− ${esc(item.reasoning.weaknesses)}</div>`:''}
+                ${item.attempts > 1 ? `<div style="font-size:11px;color:var(--yellow);margin-top:4px;">↺ потребовалось ${item.attempts} попытки</div>` : ''}
+              </div>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
+  new Chart(document.getElementById(radarId), {
+    type: 'radar',
+    data: {
+      labels: critKeys.map(k=>CRIT[k]),
+      datasets: [{ label: m.model_name, data: critKeys.map(k=>s.criteria_scores[k]||0),
+        borderColor: '#4f6ef7', backgroundColor: 'rgba(79,110,247,0.08)',
+        pointBackgroundColor: '#4f6ef7', pointRadius: 3, borderWidth: 2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      scales: { r: { min:0, max:10,
+        grid:{color:'#e4e8ef'}, angleLines:{color:'#e4e8ef'},
+        ticks:{color:'#8892a8',stepSize:2,backdropColor:'transparent'},
+        pointLabels:{color:'#4b5672',font:{size:10}} } },
+      plugins: { legend:{ display:false } }
+    }
+  });
+}
+
+function toggleRow(id) {
+  const r = document.getElementById(id);
+  if (r) r.style.display = r.style.display==='none' ? 'table-row' : 'none';
+}
+
+async function deleteResult(filename) {
+  if (!confirm('Удалить прогон?')) return;
+  await fetch(`/api/results/${filename}`, {method:'DELETE'});
+  notify('Удалено');
+  loadResults();
+}
+
+function switchResultsTab(name, el) {
+  document.querySelectorAll('#results-tabs .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#results-list-tab,#results-detail-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`results-${name}-tab`).classList.add('active');
+}
+
+// ─── CSV EXPORT ───────────────────────────────────────────────
+function exportCSV() {
+  if (!allResults.length) return;
+  const header = ['filename','model_name','overall_score','answered','total_questions','run_at',
+    ...Object.keys(CAT).map(k=>'cat_'+k),
+    ...Object.keys(CRIT).map(k=>'crit_'+k)];
+  const rows = allResults.map(r => [
+    r.filename, r.model_name, r.overall_score, r.answered, r.total_questions, r.run_at,
+    ...Object.keys(CAT).map(k=>(r.category_scores||{})[k]||''),
+    ...Object.keys(CRIT).map(k=>(r.criteria_scores||{})[k]||''),
+  ]);
+  const csv = [header, ...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `skald-bench-results-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ─── COMPARE ─────────────────────────────────────────────────
+async function loadCompareList() {
+  const res = await fetch('/api/results');
+  allResults = await res.json();
+  const wrap = document.getElementById('compare-list');
+  if (!allResults.length) { wrap.innerHTML='<div class="empty"><div class="icon">◈</div><p>Нет прогонов</p></div>'; return; }
+  wrap.innerHTML = allResults.map((r,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <input type="checkbox" id="cmp-${i}" value="${r.filename}" style="accent-color:var(--accent);width:15px;height:15px;">
+      <label for="cmp-${i}" style="flex:1;cursor:pointer;">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${esc(r.model_name)}</div>
+        <div style="font-size:11px;color:var(--text3)">${r.run_at.slice(0,16).replace('T',' ')} · ${r.answered}/${r.total_questions} вопросов</div>
+      </label>
+      <span style="font-weight:700;font-size:1.1rem;color:${sc(r.overall_score)}">${r.overall_score.toFixed(1)}</span>
+    </div>`).join('');
+}
+
+async function renderCompareRadar(runs) {
+  const datasets = runs.map((d, i) => {
+    const color = COLORS[i % COLORS.length];
+    return {
+      label: d.meta.model_name,
+      data: Object.keys(CRIT).map(k => d.summary.criteria_scores[k]||0),
+      borderColor: color, backgroundColor: color+'18',
+      pointBackgroundColor: color, pointRadius: 3, borderWidth: 2,
+    };
+  });
+  document.getElementById('compare-radar-card').style.display = 'block';
+  if (compareChart) compareChart.destroy();
+  compareChart = new Chart(document.getElementById('compare-radar'), {
+    type: 'radar',
+    data: { labels: Object.values(CRIT), datasets },
+    options: { responsive:true, maintainAspectRatio:false,
+      scales: { r: { min:0, max:10,
+        grid:{color:'#e4e8ef'}, angleLines:{color:'#e4e8ef'},
+        ticks:{color:'#8892a8',stepSize:2,backdropColor:'transparent'},
+        pointLabels:{color:'#4b5672',font:{size:10}} } },
+      plugins: { legend:{ labels:{ color:'#4b5672', font:{size:11} } } }
+    }
+  });
+}
+
+function toggleCompareBlock(i) {
+  const body = document.getElementById(`compare-body-${i}`);
+  const icon = document.getElementById(`compare-toggle-${i}`);
+  const isOpen = body.classList.toggle('open');
+  if (icon) icon.textContent = isOpen ? '▴' : '▾';
+}
+
+// ─── QUESTIONS ────────────────────────────────────────────────
+async function loadQuestions() {
+  if (!allQuestions.length) {
+    const [statsRes, qRes] = await Promise.all([
+      fetch('/api/questions/stats'), fetch('/api/questions/all')
+    ]);
+    const stats = await statsRes.json();
+    const qData = await qRes.json();
+    allQuestions = qData.questions;
+    document.getElementById('q-total').textContent = stats.total;
+    document.getElementById('q-easy').textContent = stats.difficulties.easy||0;
+    document.getElementById('q-medium').textContent = stats.difficulties.medium||0;
+    document.getElementById('q-hard').textContent = stats.difficulties.hard||0;
+  }
+  filterQuestions();
+}
+
+function filterQuestions() {
+  const cf = document.getElementById('q-filter-cat').value;
+  const df = document.getElementById('q-filter-diff').value;
+  const filtered = allQuestions.filter(q => (!cf||q.category===cf) && (!df||q.difficulty===df));
+  const tbody = document.getElementById('q-table-body');
+  tbody.innerHTML = filtered.map(q => `
+    <tr class="expandable" onclick="toggleRow('qd-${q.id}')">
+      <td style="color:var(--text3);font-size:11px;white-space:nowrap">${q.id}</td>
+      <td><span class="badge badge-accent">${CAT[q.category]||q.category}</span></td>
+      <td><span class="badge badge-${q.difficulty}">${q.difficulty}</span></td>
+      <td style="color:var(--text)">${esc(q.prompt.trim().slice(0,90))}${q.prompt.length>90?'…':''}</td>
+      <td style="color:var(--text3)">▾</td>
+    </tr>
+    <tr id="qd-${q.id}" style="display:none;" class="detail-row">
+      <td colspan="5">
+        <div style="padding:16px;">
+          <div class="detail-section-label">Запрос</div>
+          <div class="detail-section-text">${esc(q.prompt.trim())}</div>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// ─── RETRY SKIPPED ───────────────────────────────────────────
+async function retrySkipped(filename, skippedIds) {
+  const res = await fetch(`/api/results/${filename}`);
+  const data = await res.json();
+  const m = data.meta;
+
+  nav('run', document.querySelector('[data-page=run]'));
+
+  const cards = document.querySelectorAll('#models-list .model-config-card');
+  if (!cards.length) { notify('Сначала настрой модель в разделе Запуск', 'warn'); return; }
+
+  notify(`Запускаем ${skippedIds.length} пропущенных вопросов с пониженным параллелизмом`, 'warn');
+
+  const judgeKey = document.getElementById('judge-key').value.trim();
+  const judgeModel = document.getElementById('judge-model').value.trim();
+  const judgeUrl = document.getElementById('judge-url').value.trim();
+  if (!judgeKey || !judgeModel) { notify('Заполни судью', 'err'); return; }
+
+  const models = getModels();
+  if (!models.length || !models[0].api_key) { notify('Заполни модель', 'err'); return; }
+
+  models[0].concurrency = 1;
+  const judgeConc = parseInt(document.getElementById('judge-concurrency').value) || 3;
+  const payload = {
+    models: [models[0]],
+    judge_key: judgeKey, judge_model: judgeModel, judge_base_url: judgeUrl,
+    judge_concurrency: judgeConc,
+    question_ids: skippedIds,
+    mode: 'retry',
+  };
+
+  document.getElementById('run-idle-card').style.display = 'none';
+  document.getElementById('run-results-list').style.display = 'none';
+  document.getElementById('run-progress-card').style.display = 'block';
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('btn-quick').disabled = true;
+  document.getElementById('btn-stop').style.display = '';
+  document.getElementById('run-log').innerHTML = '';
+  document.getElementById('run-phase-text').textContent = 'Допрогон пропущенных...';
+  document.getElementById('run-spinner').style.display = '';
+  runProgState = {};
+
+  const mbEl = document.getElementById('model-progress-blocks');
+  mbEl.innerHTML = `<div class="model-progress-block" id="mpb-0">
+    <div class="model-progress-name"><span class="model-num" style="background:${COLORS[0]}">↺</span>${esc(models[0].name || models[0].model)}
+      <span id="mpb-status-0" style="margin-left:auto;font-size:11px;color:var(--text3)">Допрогон...</span>
+    </div>
+    <div class="prog-row"><span class="prog-label">Опрос</span><div class="progress-wrap" style="flex:1"><div class="progress-bar" id="mpb-q-0" style="width:0%"></div></div><span class="prog-val" id="mpb-q-lbl-0">0/${skippedIds.length}</span></div>
+    <div class="prog-row"><span class="prog-label">Судья</span><div class="progress-wrap" style="flex:1"><div class="progress-bar green" id="mpb-j-0" style="width:0%"></div></div><span class="prog-val" id="mpb-j-lbl-0">0/${skippedIds.length}</span></div>
+    <div id="mpb-stats-0" style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text3);"></div>
+    <div id="mpb-preview-0" style="margin-top:8px;font-size:11px;color:var(--text2);background:var(--bg3);border-radius:6px;padding:7px 10px;display:none;font-style:italic;line-height:1.5;"></div>
+  </div>`;
+
+  const ws = new WebSocket(`ws://${location.host}/ws/run`);
+  activeWs = ws;
+  ws.onopen = () => { ws.send(JSON.stringify(payload)); logLine(`↺ Допрогон: ${skippedIds.length} вопросов`, 'phase'); };
+  ws.onmessage = e => handleMsg(JSON.parse(e.data), 1);
+  ws.onerror = () => { logLine('Ошибка WebSocket', 'err'); doneRun(); };
+  ws.onclose = () => { activeWs = null; };
+}
+
+// ─── CONFETTI ─────────────────────────────────────────────────
+function launchConfetti() {
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99999;';
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const pieces = Array.from({length: 120}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * -canvas.height,
+    r: Math.random() * 8 + 4,
+    d: Math.random() * 120 + 20,
+    color: ['#4f6ef7','#e84393','#10b981','#f97316','#8b5cf6','#0ea5e9','#fbbf24'][Math.floor(Math.random()*7)],
+    tilt: Math.random() * 10 - 10,
+    tiltAngle: 0,
+    tiltSpeed: Math.random() * 0.1 + 0.05,
+  }));
+
+  let frame = 0;
+  const MAX = 180;
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      ctx.beginPath();
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = Math.max(0, 1 - frame / MAX);
+      ctx.ellipse(p.x, p.y, p.r, p.r * 0.4, p.tiltAngle, 0, Math.PI * 2);
+      ctx.fill();
+      p.y += Math.cos(p.d) + 3;
+      p.x += Math.sin(frame / 20) * 2;
+      p.tiltAngle += p.tiltSpeed;
+    });
+    frame++;
+    if (frame < MAX) requestAnimationFrame(draw);
+    else canvas.remove();
+  }
+  draw();
+}
+
+// ─── LEADERBOARD ─────────────────────────────────────────────
+function renderLeaderboard() {
+  const wrap = document.getElementById('leaderboard-wrap');
+  if (!wrap) return;
+  const mode = document.getElementById('lb-filter-mode')?.value || '';
+  let data = [...allResults];
+  if (mode) data = data.filter(r => (r.mode || 'full') === mode);
+  data.sort((a, b) => b.overall_score - a.overall_score);
+
+  if (!data.length) { wrap.innerHTML = '<div class="empty"><div class="icon">◈</div><p>Нет прогонов</p></div>'; return; }
+
+  const medals = ['🥇','🥈','🥉'];
+  const levelLabel = s => s >= 9 ? ['Элита','var(--accent)'] : s >= 8 ? ['Сильный','var(--green)'] : s >= 7 ? ['Хороший','var(--yellow)'] : s >= 6 ? ['Средний','var(--orange)'] : ['Слабый','var(--red)'];
+
+  wrap.innerHTML = `<div class="card">
+    <table>
+      <thead><tr><th>#</th><th>Модель</th><th>Балл</th><th>Уровень</th><th>Охват</th><th>Режим</th><th>Дата</th><th></th></tr></thead>
+      <tbody>${data.map((r, i) => {
+        const [lvl, lvlColor] = levelLabel(r.overall_score);
+        const medal = medals[i] || `${i+1}`;
+        const modeBadge = r.mode === 'quick' ? '<span class="badge" style="background:var(--yellow-light);color:var(--yellow);">Quick</span>' : '<span class="badge badge-gray">Full</span>';
+        return `<tr>
+          <td style="font-size:1.2rem;width:40px;text-align:center;">${medal}</td>
+          <td style="font-weight:600;color:var(--text)">${esc(r.model_name)}</td>
+          <td>${pill(r.overall_score)}</td>
+          <td><span style="font-size:12px;font-weight:600;color:${lvlColor}">${lvl}</span></td>
+          <td style="font-size:12px;color:var(--text3)">${r.coverage ?? r.answered}/${r.total_questions}</td>
+          <td>${modeBadge}</td>
+          <td style="font-size:11px;color:var(--text3)">${r.run_at.slice(0,10)}</td>
+          <td><button class="btn btn-ghost btn-xs" onclick="viewResult('${r.filename}');nav('results',document.querySelector('[data-page=results]'))">→</button></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ─── TREND ───────────────────────────────────────────────────
+function populateTrendSelect() {
+  const sel = document.getElementById('trend-model-select');
+  if (!sel) return;
+  const names = [...new Set(allResults.map(r => r.model_name))].sort();
+  sel.innerHTML = '<option value="">— выбери модель —</option>' + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+}
+
+function renderTrend() {
+  const name = document.getElementById('trend-model-select')?.value;
+  const wrap = document.getElementById('trend-wrap');
+  if (!wrap) return;
+  if (!name) { wrap.innerHTML = ''; return; }
+
+  const runs = allResults.filter(r => r.model_name === name).sort((a,b) => new Date(a.run_at)-new Date(b.run_at));
+  if (runs.length < 2) { wrap.innerHTML = '<div class="empty"><p>Нужно минимум 2 прогона для одной модели</p></div>'; return; }
+
+  const chartId = 'trend-chart-' + Date.now();
+  const labels = runs.map((r,i) => `${i+1}. ${r.run_at.slice(0,10)}`);
+  const scores = runs.map(r => r.overall_score);
+  const first = scores[0], last = scores[scores.length-1];
+  const delta = (last - first).toFixed(2);
+  const deltaColor = delta >= 0 ? 'var(--green)' : 'var(--red)';
+
+  wrap.innerHTML = `
+    <div class="grid-3 mb">
+      <div class="card stat-box"><div class="val" style="color:${sc(first)}">${first.toFixed(2)}</div><div class="lbl">Старт</div></div>
+      <div class="card stat-box"><div class="val" style="color:${sc(last)}">${last.toFixed(2)}</div><div class="lbl">Последний</div></div>
+      <div class="card stat-box"><div class="val" style="color:${deltaColor}">${delta >= 0 ? '+' : ''}${delta}</div><div class="lbl">Прогресс</div></div>
+    </div>
+    <div class="card mb">
+      <div class="card-label">Динамика общего балла</div>
+      <div class="chart-container"><canvas id="${chartId}"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-label">По категориям (последний vs первый)</div>
+      ${Object.keys(CAT).map(cat => {
+        const v1 = (runs[0].category_scores||{})[cat] || 0;
+        const v2 = (runs[runs.length-1].category_scores||{})[cat] || 0;
+        const d = (v2 - v1).toFixed(1);
+        const dc = d >= 0 ? 'var(--green)' : 'var(--red)';
+        return `<div class="cat-bar-row">
+          <span class="cat-bar-label">${CAT[cat]}</span>
+          <div class="cat-bar-wrap" style="flex:1"><div class="cat-bar-fill" style="width:${v2*10}%;background:${sc(v2)}"></div></div>
+          <span style="font-size:11px;color:${dc};width:36px;text-align:right;font-weight:700">${d >= 0 ? '+' : ''}${d}</span>
+          <span class="cat-bar-val" style="color:${sc(v2)}">${v2.toFixed(1)}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  new Chart(document.getElementById(chartId), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: name,
+        data: scores,
+        borderColor: '#4f6ef7',
+        backgroundColor: 'rgba(79,110,247,0.08)',
+        pointBackgroundColor: scores.map(s => s === Math.max(...scores) ? '#16a34a' : '#4f6ef7'),
+        pointRadius: 6,
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { min: 0, max: 10, ticks: { color: '#8892a8' }, grid: { color: '#e4e8ef' } },
+        x: { ticks: { color: '#8892a8' }, grid: { color: '#e4e8ef' } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ─── ANALYTICS ───────────────────────────────────────────────
+function populateAnalyticsSelect() {
+  const sel = document.getElementById('analytics-run-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— выбери прогон —</option>' +
+    allResults.map(r => `<option value="${r.filename}">${esc(r.model_name)} · ${r.run_at.slice(0,16).replace('T',' ')}</option>`).join('');
+}
+
+async function loadAnalytics() {
+  const fn = document.getElementById('analytics-run-select')?.value;
+  const wrap = document.getElementById('analytics-wrap');
+  if (!wrap || !fn) return;
+  wrap.innerHTML = '<div class="empty"><p>Загрузка...</p></div>';
+  const res = await fetch(`/api/results/${fn}`);
+  const data = await res.json();
+  renderAnalytics(data);
+}
+
+function renderAnalytics(data) {
+  const wrap = document.getElementById('analytics-wrap');
+  const items = data.items || [];
+  const m = data.meta;
+
+  // Response length stats
+  const answered = items.filter(i => i.response && !i.skipped);
+  const lengths = answered.map(i => i.response.split(/\s+/).length);
+  const avgLen = lengths.length ? Math.round(lengths.reduce((a,b)=>a+b,0)/lengths.length) : 0;
+  const maxItem = answered.reduce((a,b) => (b.response?.split(/\s+/).length||0) > (a.response?.split(/\s+/).length||0) ? b : a, answered[0] || {});
+  const minItem = answered.reduce((a,b) => (b.response?.split(/\s+/).length||Infinity) < (a.response?.split(/\s+/).length||Infinity) ? b : a, answered[0] || {});
+
+  // By category
+  const catLengths = {};
+  answered.forEach(i => {
+    catLengths[i.category] = catLengths[i.category] || [];
+    catLengths[i.category].push(i.response.split(/\s+/).length);
+  });
+  const catAvg = Object.entries(catLengths).map(([cat, lens]) => [cat, Math.round(lens.reduce((a,b)=>a+b,0)/lens.length)]).sort((a,b)=>b[1]-a[1]);
+
+  // List usage (% with bullet points)
+  const withLists = answered.filter(i => /^[-•*]\s|\n[-•*]\s|\d+\.\s/m.test(i.response)).length;
+  const listPct = Math.round(withLists / (answered.length||1) * 100);
+
+  // Failure clustering
+  const failed = items.filter(i => i.response_error && i.response_error !== 'not run' && !i.response);
+  const clusterByCat = {};
+  const clusterByDiff = {};
+  failed.forEach(i => {
+    clusterByCat[i.category] = (clusterByCat[i.category]||0)+1;
+    clusterByDiff[i.difficulty] = (clusterByDiff[i.difficulty]||0)+1;
+  });
+
+  // Attempts stats
+  const multiAttempt = items.filter(i => (i.attempts||1) > 1);
+  const maxAttempts = Math.max(...items.map(i => i.attempts||1));
+
+  // Score distribution
+  const scoreBuckets = [0,0,0,0,0]; // 0-2, 2-4, 4-6, 6-8, 8-10
+  items.filter(i=>!i.judge_error&&!i.skipped).forEach(i => {
+    const s = i.weighted_total;
+    scoreBuckets[Math.min(4, Math.floor(s/2))]++;
+  });
+  const distChartId = 'dist-' + Date.now();
+  const lenChartId = 'len-' + Date.now();
+
+  wrap.innerHTML = `
+    <div class="grid-4 mb">
+      <div class="card stat-box"><div class="val">${avgLen}</div><div class="lbl">слов в среднем</div></div>
+      <div class="card stat-box"><div class="val">${listPct}%</div><div class="lbl">используют списки</div></div>
+      <div class="card stat-box"><div class="val" style="color:var(--${failed.length>5?'red':'green'})">${failed.length}</div><div class="lbl">ошибок запроса</div></div>
+      <div class="card stat-box"><div class="val" style="color:var(--${multiAttempt.length>0?'yellow':'green'})">${multiAttempt.length}</div><div class="lbl">с retry</div></div>
+    </div>
+
+    <div class="grid-2 mb">
+      <div class="card">
+        <div class="card-label">Длина ответов по категориям</div>
+        ${catAvg.map(([cat,avg]) => {
+          const maxA = catAvg[0][1] || 1;
+          return `<div class="cat-bar-row">
+            <span class="cat-bar-label">${CAT[cat]||cat}</span>
+            <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${avg/maxA*100}%;background:var(--accent)"></div></div>
+            <span class="cat-bar-val" style="color:var(--accent)">${avg}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="card">
+        <div class="card-label">Распределение баллов</div>
+        <div class="chart-container"><canvas id="${distChartId}"></canvas></div>
+      </div>
+    </div>
+
+    ${failed.length ? `<div class="card mb">
+      <div class="card-label" style="color:var(--orange)">Кластеризация ошибок (${failed.length} провалов)</div>
+      <div class="grid-2" style="margin-bottom:12px;">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;">По категориям</div>
+          ${Object.entries(clusterByCat).sort((a,b)=>b[1]-a[1]).map(([cat,n])=>`
+            <div class="cat-bar-row">
+              <span class="cat-bar-label">${CAT[cat]||cat}</span>
+              <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${n/failed.length*100}%;background:var(--orange)"></div></div>
+              <span class="cat-bar-val" style="color:var(--orange)">${n}</span>
+            </div>`).join('')}
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;">По сложности</div>
+          ${Object.entries(clusterByDiff).sort((a,b)=>b[1]-a[1]).map(([d,n])=>`
+            <div class="cat-bar-row">
+              <span class="cat-bar-label"><span class="badge badge-${d}">${d}</span></span>
+              <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${n/failed.length*100}%;background:var(--orange)"></div></div>
+              <span class="cat-bar-val" style="color:var(--orange)">${n}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;">Провалившиеся вопросы</div>
+      ${failed.map(i=>`<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;">
+        <span style="font-family:monospace;color:var(--text3);width:70px;">${i.id}</span>
+        <span class="badge badge-${i.difficulty}">${i.difficulty}</span>
+        <span class="badge badge-accent">${CAT[i.category]||i.category}</span>
+        <span style="color:var(--red);font-size:11px;">${esc((i.response_error||'').slice(0,60))}</span>
+        ${(i.attempts||1)>1?`<span style="color:var(--yellow);font-size:11px;">↺${i.attempts}</span>`:''}
+      </div>`).join('')}
+    </div>` : '<div class="card mb" style="border-left:3px solid var(--green);"><div style="font-weight:600;color:var(--green);">✓ Ни одного провала запроса — отлично!</div></div>'}
+
+    <div class="card mb">
+      <div class="card-label">Экстремальные ответы</div>
+      <div class="grid-2">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;">Самый длинный ответ</div>
+          ${maxItem?.id ? `<div style="font-size:12px;"><b>${maxItem.id}</b> · ${(maxItem.response||'').split(/\s+/).length} слов<br><span style="color:var(--text3);">${esc((maxItem.response||'').slice(0,120))}…</span></div>` : '—'}
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;">Самый короткий ответ</div>
+          ${minItem?.id ? `<div style="font-size:12px;"><b>${minItem.id}</b> · ${(minItem.response||'').split(/\s+/).length} слов<br><span style="color:var(--text3);">${esc((minItem.response||'').slice(0,120))}…</span></div>` : '—'}
+        </div>
+      </div>
+    </div>`;
+
+  new Chart(document.getElementById(distChartId), {
+    type: 'bar',
+    data: {
+      labels: ['0–2','2–4','4–6','6–8','8–10'],
+      datasets: [{
+        data: scoreBuckets,
+        backgroundColor: ['#dc2626cc','#ea580ccc','#d97706cc','#16a34acc','#4f6ef7cc'],
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { ticks:{color:'#8892a8'}, grid:{color:'#e4e8ef'} }, x: { ticks:{color:'#8892a8'}, grid:{color:'transparent'} } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ─── PROMPT RECOMMENDATIONS ───────────────────────────────────
+function populatePromptsSelect() {
+  const sel = document.getElementById('prompts-run-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— выбери прогон —</option>' +
+    allResults.map(r => `<option value="${r.filename}">${esc(r.model_name)} · ${r.run_at.slice(0,16).replace('T',' ')}</option>`).join('');
+}
+
+async function loadPromptRecs() {
+  const fn = document.getElementById('prompts-run-select')?.value;
+  const wrap = document.getElementById('prompts-wrap');
+  if (!wrap || !fn) return;
+  wrap.innerHTML = '<div class="empty"><p>Загрузка...</p></div>';
+  const res = await fetch(`/api/results/${fn}`);
+  const data = await res.json();
+  renderPromptRecs(data);
+}
+
+function renderPromptRecs(data) {
+  const wrap = document.getElementById('prompts-wrap');
+  const items = data.items || [];
+  const m = data.meta;
+  const s = data.summary;
+
+  const allFixes = [];
+  items.forEach(item => {
+    if (item.prompt_fix && item.prompt_fix.trim()) {
+      allFixes.push({ category: item.category, fix: item.prompt_fix, score: item.weighted_total, id: item.id });
+    }
+  });
+
+  const byCat = {};
+  allFixes.forEach(f => { byCat[f.category] = byCat[f.category] || []; byCat[f.category].push(f); });
+
+  const weakCats = Object.entries(s.category_scores || {}).filter(([,v]) => v < 7).sort((a,b)=>a[1]-b[1]);
+
+  const systemPromptText = m.system_prompt || '';
+  let consolidated = '';
+  Object.entries(byCat).forEach(([cat, fixes]) => {
+    const unique = [...new Set(fixes.map(f=>f.fix.trim()))];
+    if (unique[0]) consolidated += `// ${CAT[cat]||cat}\n${unique[0]}\n\n`;
+  });
+
+  wrap.innerHTML = `
+    ${weakCats.length ? `<div class="card mb" style="border-left:3px solid var(--orange);">
+      <div class="card-label">Слабые категории (< 7.0)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${weakCats.map(([cat,val])=>`<div style="display:flex;align-items:center;gap:6px;background:var(--orange-light);padding:6px 12px;border-radius:var(--radius-sm);">
+          <span style="font-weight:600;color:var(--orange)">${CAT[cat]||cat}</span>
+          <span style="color:var(--orange);font-size:12px;">${val.toFixed(1)}</span>
+        </div>`).join('')}
+      </div>
+    </div>` : '<div class="card mb" style="border-left:3px solid var(--green);"><span style="font-weight:600;color:var(--green);">✓ Все категории выше 7.0 — сильный промпт!</span></div>'}
+
+    ${consolidated ? `<div class="card mb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="card-label" style="margin:0;">Консолидированные рекомендации для промпта</div>
+        <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('consolidated-fixes')">⎘ Скопировать всё</button>
+      </div>
+      <pre id="consolidated-fixes" style="background:var(--bg3);padding:14px;border-radius:var(--radius-sm);font-size:12px;font-family:monospace;white-space:pre-wrap;color:var(--text2);line-height:1.6;">${esc(consolidated.trim())}</pre>
+    </div>` : ''}
+
+    ${Object.entries(byCat).sort((a,b)=>(s.category_scores?.[a[0]]||10)-(s.category_scores?.[b[0]]||10)).map(([cat, fixes]) => {
+      const catScore = (s.category_scores||{})[cat];
+      const unique = [...new Set(fixes.map(f=>f.fix.trim()))];
+      return `<div class="card mb">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-accent">${CAT[cat]||cat}</span>
+            ${catScore !== undefined ? pill(catScore) : ''}
+          </div>
+          <span style="font-size:11px;color:var(--text3)">${fixes.length} рекомендаций</span>
+        </div>
+        ${unique.slice(0,3).map((fix,i) => `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+          <button class="btn btn-ghost btn-xs" onclick="copyToClipboard('fix-${cat}-${i}')" style="flex-shrink:0;margin-top:2px;">⎘</button>
+          <code id="fix-${cat}-${i}" style="display:block;background:var(--bg3);padding:8px 12px;border-radius:6px;font-size:12px;line-height:1.6;flex:1;font-family:monospace;color:var(--text2);">${esc(fix)}</code>
+        </div>`).join('')}
+        ${fixes.length > 3 ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">+${fixes.length-3} ещё</div>` : ''}
+      </div>`;
+    }).join('')}
+
+    ${systemPromptText ? `<div class="card">
+      <div class="card-label">Текущий системный промпт</div>
+      <pre style="background:var(--bg3);padding:14px;border-radius:var(--radius-sm);font-size:12px;font-family:monospace;white-space:pre-wrap;color:var(--text3);">${esc(systemPromptText)}</pre>
+    </div>` : ''}`;
+}
+
+function copyToClipboard(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => notify('Скопировано!', 'ok'));
+}
+
+// ─── SIDE-BY-SIDE IN COMPARE ─────────────────────────────────
+let _compareRuns = [];
+
+async function openCompare() {
+  const checked = [...document.querySelectorAll('#compare-list input:checked')].map(c=>c.value);
+  if (checked.length < 2) { notify('Выбери минимум 2 прогона','err'); return; }
+
+  const runs = [];
+  for (const fn of checked) {
+    const res = await fetch(`/api/results/${fn}`);
+    const d = await res.json();
+    runs.push(d);
+  }
+  _compareRuns = runs;
+
+  await renderCompareRadar(runs);
+  renderCompareNative(runs);
+  document.getElementById('compare-result-wrap').scrollIntoView({behavior:'smooth'});
+}
+
+function renderCompareNative(runs) {
+  const wrap = document.getElementById('compare-result-wrap');
+
+  const summaryCards = runs.map((d, i) => {
+    const color = COLORS[i % COLORS.length];
+    const s = d.summary; const m = d.meta;
+    return `<div class="card" style="border-top:3px solid ${color};text-align:center;">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:500;">${esc(m.model_name)}</div>
+      <div style="font-size:2.4rem;font-weight:800;color:${color}">${s.overall_score.toFixed(2)}</div>
+      <div style="font-size:11px;color:var(--text3);">/ 10.00 · ${m.coverage??m.answered}/${m.total_questions}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">${m.run_at.slice(0,16).replace('T',' ')}</div>
+    </div>`;
+  }).join('');
+
+  const catBarChart = `<div class="card mb">
+    <div class="card-label">По категориям</div>
+    ${Object.keys(CAT).map(cat => {
+      const bars = runs.map((d, i) => {
+        const val = (d.summary.category_scores||{})[cat] || 0;
+        const color = COLORS[i % COLORS.length];
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <span style="font-size:10px;color:${color};font-weight:600;width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(d.meta.model_name.slice(0,14))}</span>
+          <div class="cat-bar-wrap" style="flex:1"><div class="cat-bar-fill" style="width:${val*10}%;background:${color}"></div></div>
+          <span style="font-size:11px;font-weight:700;color:${color};width:28px;text-align:right;">${val.toFixed(1)}</span>
+        </div>`;
+      }).join('');
+      return `<div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">${CAT[cat]||cat}</div>
+        ${bars}
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  const modelAccordions = runs.map((d, i) => {
+    const color = COLORS[i % COLORS.length];
+    const s = d.summary; const m = d.meta;
+    const critBars = Object.keys(CRIT).map(k => {
+      const val = (s.criteria_scores||{})[k] || 0;
+      return `<div class="cat-bar-row">
+        <span class="cat-bar-label">${CRIT[k]||k}</span>
+        <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${val*10}%;background:${color}"></div></div>
+        <span class="cat-bar-val" style="color:${color}">${val.toFixed(1)}</span>
+      </div>`;
+    }).join('');
+    const topItems = [...(d.items||[])].filter(i=>!i.judge_error&&!i.skipped).sort((a,b)=>b.weighted_total-a.weighted_total).slice(0,3);
+    const botItems = [...(d.items||[])].filter(i=>!i.judge_error&&!i.skipped).sort((a,b)=>a.weighted_total-b.weighted_total).slice(0,3);
+    const itemRows = (arr, label) => arr.length ? `<div style="font-size:11px;font-weight:600;color:var(--text3);margin:10px 0 6px;text-transform:uppercase;letter-spacing:0.05em;">${label}</div>` +
+      arr.map(it=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;font-size:12px;">
+        <span style="color:var(--text3);flex-shrink:0;width:60px;">${it.id}</span>
+        <span style="flex:1;color:var(--text2);">${esc(it.prompt.trim().slice(0,70))}…</span>
+        ${pill(it.weighted_total)}
+        <button class="btn btn-ghost btn-xs" onclick="openSideBySide('${it.id}')">⇌</button>
+      </div>`).join('') : '';
+
+    return `<div class="compare-model-block">
+      <div class="compare-model-header" onclick="toggleCompareBlock(${i})">
+        <div class="compare-model-score" style="color:${color}">${s.overall_score.toFixed(2)}</div>
+        <div>
+          <div class="compare-model-name">${esc(m.model_name)}</div>
+          <div class="compare-model-meta">${m.coverage??m.answered}/${m.total_questions} ответов · ${m.run_at.slice(0,10)}</div>
+        </div>
+        <span id="compare-toggle-${i}" style="color:var(--text3);font-size:16px;margin-left:auto;">▾</span>
+      </div>
+      <div class="compare-model-body" id="compare-body-${i}">
+        <div style="margin-bottom:14px;"><div class="card-label">Критерии</div>${critBars}</div>
+        ${itemRows(topItems, 'Лучшие ответы')}
+        ${itemRows(botItems, 'Слабые ответы')}
+      </div>
+    </div>`;
+  }).join('');
+
+  const gridCols = Math.min(runs.length, 4);
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(${gridCols},1fr);gap:14px;margin-bottom:20px;">${summaryCards}</div>
+    ${catBarChart}
+    <div class="card-label" style="margin-bottom:12px;">Детали по моделям</div>
+    ${modelAccordions}
+    <div id="sbs-wrap"></div>`;
+}
+
+function openSideBySide(questionId) {
+  const wrap = document.getElementById('sbs-wrap');
+  if (!wrap || !_compareRuns.length) return;
+
+  const items = _compareRuns.map(run => {
+    const item = (run.items||[]).find(i => i.id === questionId);
+    return { model: run.meta.model_name, item };
+  }).filter(x => x.item);
+
+  if (!items.length) return;
+
+  const prompt = items[0].item.prompt || '';
+  wrap.innerHTML = `
+    <div class="card" style="margin-top:16px;border-top:3px solid var(--accent);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="card-label" style="margin:0;">Side-by-side: ${questionId}</div>
+        <button class="btn btn-ghost btn-xs" onclick="document.getElementById('sbs-wrap').innerHTML=''">✕</button>
+      </div>
+      <div style="background:var(--bg3);padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:16px;font-size:12px;color:var(--text2);">${esc(prompt.trim())}</div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(items.length,3)},1fr);gap:14px;">
+        ${items.map((x, i) => {
+          const color = COLORS[i % COLORS.length];
+          const it = x.item;
+          return `<div>
+            <div style="font-weight:600;font-size:12px;color:${color};margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid ${color};">${esc(x.model)}</div>
+            <div style="font-size:11px;margin-bottom:8px;">${pill(it.weighted_total)}</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;max-height:300px;overflow-y:auto;background:var(--bg3);padding:10px;border-radius:6px;">${esc((it.response||'[нет ответа]').slice(0,500))}</div>
+            ${it.reasoning?.strengths ? `<div style="font-size:11px;color:var(--green);margin-top:8px;">+ ${esc(it.reasoning.strengths)}</div>` : ''}
+            ${it.reasoning?.weaknesses ? `<div style="font-size:11px;color:var(--orange);">− ${esc(it.reasoning.weaknesses)}</div>` : ''}
+            ${it.ideal_answer ? `<div style="font-size:11px;color:var(--accent);margin-top:6px;background:var(--accent-light);padding:6px 8px;border-radius:4px;"><b>Идеал:</b> ${esc(it.ideal_answer)}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  wrap.scrollIntoView({behavior:'smooth'});
+}
+
+// ─── MARKDOWN EXPORT ──────────────────────────────────────────
+async function exportMarkdown(filename) {
+  const res = await fetch(`/api/results/${filename}`);
+  const data = await res.json();
+  const s = data.summary; const m = data.meta;
+
+  const levelLabel = score => score >= 9 ? 'Элита' : score >= 8 ? 'Сильный' : score >= 7 ? 'Хороший' : score >= 6 ? 'Средний' : 'Слабый';
+
+  let md = `# OfficeIQ Bench — ${m.model_name}\n\n`;
+  md += `> Дата: ${m.run_at.slice(0,16).replace('T',' ')} | Режим: ${m.mode||'full'} | Охват: ${m.coverage??m.answered}/${m.total_questions}\n\n`;
+  md += `## Итог: **${s.overall_score.toFixed(2)} / 10** — ${levelLabel(s.overall_score)}\n\n`;
+  md += `## По категориям\n\n`;
+  md += `| Категория | Балл |\n|-----------|------|\n`;
+  Object.entries(s.category_scores).sort((a,b)=>b[1]-a[1]).forEach(([cat,val]) => {
+    md += `| ${CAT[cat]||cat} | ${val.toFixed(2)} |\n`;
+  });
+  md += `\n## По критериям\n\n`;
+  md += `| Критерий | Балл |\n|----------|------|\n`;
+  Object.entries(s.criteria_scores).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => {
+    md += `| ${CRIT[k]||k} | ${v.toFixed(2)} |\n`;
+  });
+
+  const fixes = Object.entries(s.prompt_fixes||{});
+  if (fixes.length) {
+    md += `\n## Рекомендации для системного промпта\n\n`;
+    fixes.forEach(([cat, arr]) => {
+      md += `**${CAT[cat]||cat}:**\n\`\`\`\n${arr[0]}\n\`\`\`\n\n`;
+    });
+  }
+
+  md += `\n---\n*Сгенерировано OfficeIQ Bench · ${new Date().toLocaleDateString('ru')}*\n`;
+
+  const blob = new Blob([md], {type:'text/markdown;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `officeiq-${m.model_name.replace(/\s+/g,'-')}-${m.run_at.slice(0,10)}.md`;
+  a.click();
+}
+
+// ─── CERTIFICATE ──────────────────────────────────────────────
+async function downloadCertificate(filename) {
+  const res = await fetch(`/api/results/${filename}`);
+  const data = await res.json();
+  const s = data.summary; const m = data.meta;
+  const score = s.overall_score;
+  const color = score >= 8 ? '#16a34a' : score >= 6 ? '#d97706' : '#dc2626';
+  const levelLabel = score >= 9 ? 'Элита' : score >= 8 ? 'Сильный' : score >= 7 ? 'Хороший' : score >= 6 ? 'Средний' : 'Слабый';
+
+  const catBars = Object.entries(s.category_scores).sort((a,b)=>b[1]-a[1]).map(([cat,val]) => {
+    const pct = Math.round(val * 10);
+    const c = val>=8?'#16a34a':val>=6?'#d97706':'#dc2626';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span style="width:110px;font-size:11px;color:#64748b;">${{'communication':'Коммуникация','meetings':'Встречи','documents':'Документы','analytics':'Аналитика','hr_team':'HR и команда','negotiations':'Переговоры','stress':'Стресс','ethics':'Этика','emotional':'Эмоции','adversarial':'Adversarial'}[cat]||cat}</span>
+      <div style="flex:1;background:#f1f5f9;border-radius:999px;height:6px;"><div style="width:${pct}%;height:6px;border-radius:999px;background:${c};"></div></div>
+      <span style="font-size:11px;font-weight:700;color:${c};width:28px;">${val.toFixed(1)}</span>
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
+<title>Сертификат — ${m.model_name}</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f9fb;margin:0;padding:40px;display:flex;justify-content:center;}
+  .cert{background:#fff;border:2px solid #e4e8ef;border-radius:16px;padding:48px;max-width:700px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
+  .header{text-align:center;margin-bottom:32px;}
+  .badge{display:inline-block;background:${color}18;color:${color};padding:6px 16px;border-radius:999px;font-size:13px;font-weight:600;margin-bottom:12px;}
+  h1{font-size:14px;color:#8892a8;font-weight:500;margin-bottom:8px;}
+  .model{font-size:28px;font-weight:800;color:#0f1623;margin-bottom:8px;}
+  .score-big{font-size:72px;font-weight:900;color:${color};line-height:1;}
+  .level{font-size:18px;font-weight:600;color:${color};margin-top:4px;}
+  .divider{border:none;border-top:1px solid #e4e8ef;margin:28px 0;}
+  .meta{display:flex;justify-content:center;gap:32px;margin-bottom:24px;font-size:12px;color:#8892a8;}
+  .meta b{color:#4b5672;}
+  .footer{text-align:center;font-size:11px;color:#8892a8;margin-top:32px;}
+</style></head><body><div class="cert">
+  <div class="header">
+    <div class="badge">⚡ OfficeIQ Bench</div>
+    <h1>AI ASSISTANT CERTIFICATION</h1>
+    <div class="model">${m.model_name}</div>
+    <div class="score-big">${score.toFixed(2)}</div>
+    <div class="level">${levelLabel}</div>
+  </div>
+  <div class="meta">
+    <div>Дата <b>${m.run_at.slice(0,10)}</b></div>
+    <div>Охват <b>${m.coverage??m.answered}/${m.total_questions}</b></div>
+    <div>Режим <b>${m.mode||'full'}</b></div>
+  </div>
+  <hr class="divider">
+  <div style="margin-bottom:24px;">${catBars}</div>
+  <div class="footer">Сертифицировано OfficeIQ Bench · officeiq-bench · ${new Date().getFullYear()}</div>
+</div></body></html>`;
+
+  const blob = new Blob([html], {type:'text/html;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `cert-${m.model_name.replace(/\s+/g,'-')}.html`;
+  a.click();
+}
+
+// ─── DARK MODE ───────────────────────────────────────────────
+function toggleDark() {
+  const isDark = document.body.classList.toggle('dark');
+  document.getElementById('btn-dark').textContent = isDark ? '🌙' : '☀';
+  localStorage.setItem('dark', isDark ? '1' : '');
+}
+
+// ─── AUTO-NAMING ─────────────────────────────────────────────
+function suggestModelName(urlInput, modelInput, nameInput) {
+  const url = urlInput?.value || '';
+  const model = modelInput?.value || '';
+  if (!model || (nameInput?.value && nameInput.value !== nameInput.dataset.auto)) return;
+  const providerMap = {
+    'openai.com': 'OpenAI', 'anthropic.com': 'Anthropic', 'together.ai': 'Together',
+    'groq.com': 'Groq', 'mistral.ai': 'Mistral', 'deepinfra.com': 'DeepInfra',
+    'cohere.com': 'Cohere', 'deepseek.com': 'DeepSeek', 'localhost': 'Local',
+    '127.0.0.1': 'Local',
+  };
+  const provider = Object.entries(providerMap).find(([k]) => url.includes(k))?.[1] || '';
+  const modelClean = model.split('/').pop().replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  const suggested = provider ? `${provider} · ${modelClean}` : modelClean;
+  if (nameInput) { nameInput.value = suggested; nameInput.dataset.auto = suggested; }
+}
+
+// ─── NAV UPDATE ──────────────────────────────────────────────
+// Extend nav to handle new pages
+const _navOrig = nav;
+
+// ─── PROMPT LAB A/B ──────────────────────────────────────────
+let abWs = null;
+
+function startAB() {
+  const key = document.getElementById('ab-key').value.trim();
+  const model = document.getElementById('ab-model').value.trim();
+  const judgeKey = document.getElementById('ab-judge-key').value.trim();
+  const judgeModel = document.getElementById('ab-judge-model').value.trim();
+  if (!key || !model) { notify('Заполни ключ и ID модели', 'err'); return; }
+  if (!judgeKey || !judgeModel) { notify('Заполни судью', 'err'); return; }
+
+  const promptA = document.getElementById('ab-prompt-a').value.trim();
+  const promptB = document.getElementById('ab-prompt-b').value.trim();
+  if (!promptB) { notify('Промпт B не может быть пустым', 'err'); return; }
+
+  const mode = document.querySelector('input[name="ab-mode"]:checked')?.value || 'quick';
+
+  document.getElementById('ab-idle-card').style.display = 'none';
+  document.getElementById('ab-result-wrap').innerHTML = '';
+  document.getElementById('ab-progress-card').style.display = 'block';
+  document.getElementById('ab-log').innerHTML = '';
+  document.getElementById('ab-phase-text').textContent = 'Запуск...';
+  document.getElementById('ab-spinner').style.display = '';
+  document.getElementById('btn-ab-run').disabled = true;
+  document.getElementById('btn-ab-stop').style.display = '';
+
+  const payload = {
+    model: {
+      name: 'AB', base_url: document.getElementById('ab-url').value.trim(),
+      api_key: key, model, concurrency: 5,
+    },
+    prompt_a: promptA, prompt_b: promptB,
+    judge_key: judgeKey, judge_model: judgeModel,
+    judge_base_url: document.getElementById('ab-judge-url').value.trim(),
+    judge_concurrency: 3, mode,
+  };
+
+  abWs = new WebSocket(`ws://${location.host}/ws/ab`);
+  abWs.onopen = () => { abWs.send(JSON.stringify(payload)); abLog('Соединение установлено', 'ok'); };
+  abWs.onmessage = e => handleABMsg(JSON.parse(e.data));
+  abWs.onerror = () => { abLog('Ошибка WebSocket', 'err'); doneAB(); };
+  abWs.onclose = () => { abWs = null; };
+}
+
+function stopAB() {
+  if (abWs?.readyState === WebSocket.OPEN) {
+    abWs.send(JSON.stringify({type:'cancel'}));
+    document.getElementById('btn-ab-stop').disabled = true;
+  }
+}
+
+function doneAB() {
+  document.getElementById('btn-ab-run').disabled = false;
+  document.getElementById('btn-ab-stop').style.display = 'none';
+  document.getElementById('btn-ab-stop').disabled = false;
+  document.getElementById('ab-spinner').style.display = 'none';
+}
+
+function abLog(text, cls='') {
+  const log = document.getElementById('ab-log');
+  const d = document.createElement('div');
+  d.className = 'log-entry ' + cls;
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+function handleABMsg(msg) {
+  if (msg.event === 'ab_start') abLog(`▶ Режим: ${msg.mode} · ${msg.total} вопросов`, 'phase');
+  if (msg.event === 'ab_phase') {
+    document.getElementById('ab-phase-text').textContent = msg.message;
+    abLog(`⟶ ${msg.message}`, 'phase');
+  }
+  if (msg.event === 'model_start') abLog(`▷ [${msg.model_name}] Старт`, 'phase');
+  if (msg.event === 'response') {
+    if (msg.error) abLog(`✗ [${msg.question_id}] ${msg.error}`, 'err');
+    else abLog(`✓ [${msg.question_id}] ${msg.latency_ms}мс`, 'ok');
+  }
+  if (msg.event === 'model_done') abLog(`✓ [${msg.model_name}] ${msg.overall_score.toFixed(2)}/10`, 'done');
+  if (msg.event === 'ab_cancelled') { abLog('⏹ Остановлено', 'warn'); doneAB(); }
+  if (msg.event === 'ab_error') { abLog(`💥 ${msg.message}`, 'err'); notify(msg.message,'err'); doneAB(); }
+  if (msg.event === 'ab_done') { renderABResult(msg); doneAB(); }
+}
+
+function renderABResult(r) {
+  document.getElementById('ab-progress-card').style.display = 'none';
+  const deltaSign = r.delta > 0 ? '+' : '';
+  const deltaColor = r.delta > 0.2 ? 'var(--green)' : r.delta < -0.2 ? 'var(--red)' : 'var(--text3)';
+  const winnerBg = r.winner === 'B' ? 'var(--green-light)' : r.winner === 'A' ? 'var(--orange-light)' : 'var(--bg3)';
+  const winnerColor = r.winner === 'B' ? 'var(--green)' : r.winner === 'A' ? 'var(--orange)' : 'var(--text3)';
+
+  const catRows = Object.entries(r.cat_delta).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([cat, d]) => {
+    const cls = d > 0.1 ? 'ab-delta-pos' : d < -0.1 ? 'ab-delta-neg' : 'ab-delta-neu';
+    return `<div class="cat-bar-row">
+      <span class="cat-bar-label">${CAT[cat]||cat}</span>
+      <div style="flex:1;display:flex;gap:8px;align-items:center;">
+        ${pill(r.score_a && r.cat_delta ? ((r.score_a||0)) : 0)}
+        <span style="color:var(--text3);font-size:11px;">→</span>
+        <span class="${cls}">${d > 0 ? '+' : ''}${d.toFixed(2)}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const itemRows = (r.item_deltas||[]).slice(0,10).map(it => {
+    const cls = it.delta > 0.3 ? 'ab-delta-pos' : it.delta < -0.3 ? 'ab-delta-neg' : 'ab-delta-neu';
+    return `<tr>
+      <td style="font-size:11px;color:var(--text3);">${it.id}</td>
+      <td><span class="badge badge-${it.difficulty}">${it.difficulty}</span></td>
+      <td><span class="badge badge-accent">${CAT[it.category]||it.category}</span></td>
+      <td style="max-width:200px;font-size:11px;color:var(--text2);">${esc(it.prompt)}…</td>
+      <td>${pill(it.score_a)}</td>
+      <td>${pill(it.score_b)}</td>
+      <td class="${cls}">${it.delta > 0 ? '+' : ''}${it.delta.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('ab-result-wrap').innerHTML = `
+    <div class="card mb" style="background:${winnerBg};border-color:${winnerColor};text-align:center;padding:24px;">
+      <div style="font-size:12px;font-weight:600;color:${winnerColor};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+        ${r.winner === 'B' ? '🎉 Промпт B победил!' : r.winner === 'A' ? '⚠ Промпт A лучше' : '🤝 Ничья'}
+      </div>
+      <div style="display:flex;justify-content:center;gap:32px;align-items:center;">
+        <div style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:${sc(r.score_a)}">${r.score_a.toFixed(2)}</div><div style="font-size:11px;color:var(--text3);">Промпт A</div></div>
+        <div style="font-size:1.6rem;font-weight:800;color:${deltaColor}">${deltaSign}${r.delta.toFixed(2)}</div>
+        <div style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:${sc(r.score_b)}">${r.score_b.toFixed(2)}</div><div style="font-size:11px;color:var(--text3);">Промпт B</div></div>
+      </div>
+    </div>
+
+    <div class="card mb">
+      <div class="card-label">Дельта по категориям</div>
+      ${catRows}
+    </div>
+
+    <div class="table-wrap">
+      <div class="card-label" style="padding:12px 14px 0;">Топ изменений по вопросам</div>
+      <table>
+        <thead><tr><th>ID</th><th>Слож.</th><th>Кат.</th><th>Вопрос</th><th>A</th><th>B</th><th>Δ</th></tr></thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ─── COMPANY PROFILES ─────────────────────────────────────────
+const PROFILE_WEIGHTS = {
+  hr:     { hr_team:2.0, emotional:2.0, ethics:1.8, stress:1.5, communication:1.2, meetings:1.0, documents:0.8, analytics:0.8, negotiations:0.8, adversarial:1.5 },
+  sales:  { negotiations:2.0, communication:2.0, stress:1.5, analytics:1.3, meetings:1.0, hr_team:0.8, documents:0.8, ethics:1.3, emotional:1.0, adversarial:1.5 },
+  pm:     { meetings:2.0, analytics:2.0, stress:1.8, documents:1.5, communication:1.3, hr_team:1.0, negotiations:1.0, ethics:1.0, emotional:0.8, adversarial:1.2 },
+  custom: null,
+};
+
+let selectedProfile = null;
+
+function selectProfile(name) {
+  document.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById(`profile-${name}`)?.classList.add('selected');
+  selectedProfile = name;
+
+  const customCard = document.getElementById('custom-weights-card');
+  if (name === 'custom') {
+    customCard.style.display = 'block';
+    const wrap = document.getElementById('custom-weights-inputs');
+    wrap.innerHTML = Object.keys(CAT).map(cat => `
+      <div>
+        <label class="form-label">${CAT[cat]} <span class="opt">(1.0 = норма)</span></label>
+        <input class="form-input" type="number" id="cw-${cat}" value="1.0" min="0.1" max="5" step="0.1">
+      </div>`).join('');
+  } else {
+    customCard.style.display = 'none';
+  }
+  renderProfileResults();
+}
+
+function getProfileWeights() {
+  if (!selectedProfile) return null;
+  if (selectedProfile !== 'custom') return PROFILE_WEIGHTS[selectedProfile];
+  const w = {};
+  Object.keys(CAT).forEach(cat => {
+    w[cat] = parseFloat(document.getElementById(`cw-${cat}`)?.value) || 1.0;
+  });
+  return w;
+}
+
+function calcProfileScore(result, weights) {
+  const cats = result.category_scores || {};
+  let total = 0, wsum = 0;
+  Object.entries(weights).forEach(([cat, w]) => {
+    const v = cats[cat] || 0;
+    total += v * w; wsum += w;
+  });
+  return wsum > 0 ? round2(total / wsum) : 0;
+}
+
+function round2(n) { return Math.round(n * 100) / 100; }
+
+function renderProfileResults() {
+  const wrap = document.getElementById('profiles-result-wrap');
+  const weights = getProfileWeights();
+  if (!weights || !allResults.length) { if(wrap) wrap.innerHTML=''; return; }
+
+  const profileName = {hr:'HR-ассистент', sales:'Sales-ассистент', pm:'PM-ассистент', custom:'Кастомный'}[selectedProfile] || selectedProfile;
+
+  const scored = allResults.map(r => ({
+    ...r,
+    profile_score: calcProfileScore(r, weights),
+  })).sort((a,b) => b.profile_score - a.profile_score);
+
+  wrap.innerHTML = `<div class="card">
+    <div class="card-label">Рейтинг для профиля: ${profileName}</div>
+    <table>
+      <thead><tr><th>#</th><th>Модель</th><th>Базовый балл</th><th style="color:var(--accent)">Профильный балл</th><th>Разница</th><th>Дата</th></tr></thead>
+      <tbody>${scored.map((r, i) => {
+        const delta = round2(r.profile_score - r.overall_score);
+        const dCls = delta >= 0 ? 'ab-delta-pos' : 'ab-delta-neg';
+        return `<tr>
+          <td style="color:var(--text3);text-align:center;">${i+1}</td>
+          <td style="font-weight:600;">${esc(r.model_name)}</td>
+          <td>${pill(r.overall_score)}</td>
+          <td><span class="score-pill" style="background:var(--accent-light);color:var(--accent);font-weight:800;">${r.profile_score.toFixed(2)}</span></td>
+          <td class="${dCls}">${delta >= 0?'+':''}${delta.toFixed(2)}</td>
+          <td style="font-size:11px;color:var(--text3);">${r.run_at.slice(0,10)}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ─── CONSISTENCY TEST ─────────────────────────────────────────
+let csWs = null;
+
+function startConsistency() {
+  const key = document.getElementById('cs-key').value.trim();
+  const model = document.getElementById('cs-model').value.trim();
+  const judgeKey = document.getElementById('cs-judge-key').value.trim();
+  const judgeModel = document.getElementById('cs-judge-model').value.trim();
+  if (!key || !model) { notify('Заполни ключ и ID модели', 'err'); return; }
+  if (!judgeKey || !judgeModel) { notify('Заполни судью', 'err'); return; }
+
+  document.getElementById('cs-idle-card').style.display = 'none';
+  document.getElementById('cs-result-wrap').innerHTML = '';
+  document.getElementById('cs-progress-card').style.display = 'block';
+  document.getElementById('cs-log').innerHTML = '';
+  document.getElementById('cs-phase-text').textContent = 'Запуск...';
+  document.getElementById('cs-spinner').style.display = '';
+  document.getElementById('btn-cs-run').disabled = true;
+
+  const payload = {
+    model: {
+      name: model, base_url: document.getElementById('cs-url').value.trim(),
+      api_key: key, model,
+      system_prompt: document.getElementById('cs-sysprompt').value.trim() || null,
+      concurrency: 3,
+    },
+    judge_key: judgeKey, judge_model: judgeModel,
+    judge_base_url: document.getElementById('cs-judge-url').value.trim(),
+    judge_concurrency: 3,
+  };
+
+  csWs = new WebSocket(`ws://${location.host}/ws/consistency`);
+  csWs.onopen = () => { csWs.send(JSON.stringify(payload)); csLog('Соединение установлено', 'ok'); };
+  csWs.onmessage = e => handleCSMsg(JSON.parse(e.data));
+  csWs.onerror = () => { csLog('Ошибка WebSocket', 'err'); doneCS(); };
+  csWs.onclose = () => { csWs = null; };
+}
+
+function doneCS() {
+  document.getElementById('btn-cs-run').disabled = false;
+  document.getElementById('cs-spinner').style.display = 'none';
+}
+
+function csLog(text, cls='') {
+  const log = document.getElementById('cs-log');
+  const d = document.createElement('div');
+  d.className = 'log-entry ' + cls;
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+}
+
+function handleCSMsg(msg) {
+  if (msg.event === 'consistency_start') csLog(`▶ Тест: ${msg.total_runs} прогона × ${msg.questions} вопросов`, 'phase');
+  if (msg.event === 'consistency_phase') { document.getElementById('cs-phase-text').textContent = msg.message; csLog(`⟶ ${msg.message}`, 'phase'); }
+  if (msg.event === 'model_start') csLog(`▷ [${msg.model_name}] Прогон ${msg.model_idx+1}`, 'phase');
+  if (msg.event === 'response') {
+    if (msg.error) csLog(`✗ [${msg.question_id}] ${msg.error}`, 'err');
+    else csLog(`✓ [${msg.question_id}] ${msg.latency_ms}мс`, 'ok');
+  }
+  if (msg.event === 'model_done') csLog(`✓ Прогон ${msg.model_idx+1}: ${msg.overall_score.toFixed(2)}/10`, 'done');
+  if (msg.event === 'consistency_error') { csLog(`💥 ${msg.message}`, 'err'); notify(msg.message,'err'); doneCS(); }
+  if (msg.event === 'consistency_done') { renderCSResult(msg); doneCS(); }
+}
+
+function renderCSResult(r) {
+  document.getElementById('cs-progress-card').style.display = 'none';
+  const stabColor = r.stability === 'Высокая' ? 'var(--green)' : r.stability === 'Средняя' ? 'var(--yellow)' : 'var(--red)';
+  const stabBg = r.stability === 'Высокая' ? 'var(--green-light)' : r.stability === 'Средняя' ? 'var(--yellow-light)' : 'var(--red-light)';
+
+  const qRows = (r.q_variance||[]).map(q => {
+    const varColor = q.variance < 0.5 ? 'var(--green)' : q.variance < 1.5 ? 'var(--yellow)' : 'var(--red)';
+    return `<tr>
+      <td style="font-size:11px;color:var(--text3);">${q.id}</td>
+      <td>${q.scores.map(s => pill(s)).join(' ')}</td>
+      <td>${pill(q.avg)}</td>
+      <td style="font-weight:700;color:${varColor};">${q.variance.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('cs-result-wrap').innerHTML = `
+    <div class="grid-3 mb">
+      <div class="card stat-box">
+        <div class="val" style="color:${stabColor}">${r.stability}</div>
+        <div class="lbl">Стабильность</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val" style="color:${sc(r.avg)}">${r.avg.toFixed(2)}</div>
+        <div class="lbl">Средний балл</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val" style="color:${r.variance < 0.5 ? 'var(--green)' : 'var(--orange)'}">${r.variance.toFixed(2)}</div>
+        <div class="lbl">Разброс (max−min)</div>
+      </div>
+    </div>
+
+    <div class="card mb" style="background:${stabBg};border-color:${stabColor};">
+      <div style="font-weight:600;color:${stabColor};margin-bottom:4px;">
+        ${r.stability === 'Высокая' ? '✓ Модель стабильна — можно доверять результатам' : r.stability === 'Средняя' ? '⚠ Умеренная нестабильность — рекомендуй усреднение из нескольких прогонов' : '✗ Высокая нестабильность — результаты сильно зависят от "настроения" модели'}
+      </div>
+      <div style="font-size:12px;color:var(--text2);">Баллы по прогонам: ${r.scores.map(s=>`<b>${s.toFixed(2)}</b>`).join(' · ')}</div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="card-label" style="padding:12px 14px 0;">Стабильность по вопросам</div>
+      <table>
+        <thead><tr><th>ID</th><th>Баллы (3 прогона)</th><th>Среднее</th><th>Разброс</th></tr></thead>
+        <tbody>${qRows}</tbody>
+      </table>
+    </div>`;
+}
+
+
+
+// ─── SERVER STATUS ────────────────────────────────────────────
+async function checkServer() {
+  try {
+    const r = await fetch('/api/questions/stats');
+    if (r.ok) {
+      document.getElementById('status-dot').classList.add('online');
+      document.getElementById('status-text').textContent = 'Сервер онлайн';
+    }
+  } catch {
+    document.getElementById('status-text').textContent = 'Офлайн';
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+(async () => {
+  if (localStorage.getItem('dark') === '1') {
+    document.body.classList.add('dark');
+    document.getElementById('btn-dark').textContent = '🌙';
+  }
+  checkServer();
+  addModel();
+
+  // Auto-suggest model name when model ID changes
+  document.addEventListener('input', e => {
+    const id = e.target?.id;
+    if (!id) return;
+    const m = id.match(/^m(\d+)-(?:model|url)$/);
+    if (m) {
+      const idx = m[1];
+      suggestModelName(
+        document.getElementById(`m${idx}-url`),
+        document.getElementById(`m${idx}-model`),
+        document.getElementById(`m${idx}-name`)
+      );
+    }
+  });
+})();
+</script>
+</body>
+</html>
