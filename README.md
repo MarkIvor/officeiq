@@ -258,8 +258,8 @@ ML-бэкграунд не нужен. Достаточно Python и API-клю
 ### Установка
 
 ```bash
-git clone https://github.com/MarkIvor/officeiq-bench
-cd officeiq-bench
+git clone https://github.com/MarkIvor/officeiq
+cd officeiq
 pip install -r requirements.txt
 ```
 
@@ -357,7 +357,7 @@ Ad hoc оценка через чат — нет.
 ## Структура проекта
 
 ```
-officeiq-bench/
+officeiq/
 ├── server.py              # FastAPI backend + WebSocket оркестратор
 ├── runner/
 │   ├── client.py          # Async клиент модели с retry
