@@ -1,6 +1,6 @@
 import asyncio
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 import httpx
@@ -15,6 +15,19 @@ class JudgeScore:
     analysis: str = ""
     ideal_answer: str = ""
     prompt_fix: str = ""
+    error: Optional[str] = None
+
+
+@dataclass
+class StressScore:
+    question_id: str
+    turn_scores: dict[str, int]
+    broke_on: Optional[int]
+    held: bool
+    scores: dict[str, int]
+    weighted_total: float
+    reasoning: dict[str, str]
+    analysis: str = ""
     error: Optional[str] = None
 
 
@@ -183,3 +196,130 @@ class Judge:
                 if progress_cb:
                     progress_cb(result)
             return sorted(results, key=lambda s: s.question_id)
+
+    async def _judge_stress_one(
+        self,
+        client: httpx.AsyncClient,
+        result,
+        system_prompt: str,
+        user_template: str,
+        lang: str,
+        retries: int = 2,
+    ) -> StressScore:
+        if result.error and not any(m.get("content") for m in result.turns if m["role"] == "assistant"):
+            return StressScore(
+                question_id=result.question_id,
+                turn_scores={},
+                broke_on=None,
+                held=False,
+                scores={k: 0 for k in WEIGHTS},
+                weighted_total=0.0,
+                reasoning={"strengths": "", "weaknesses": f"Answer not received: {result.error}", "notable": ""},
+                error=result.error,
+            )
+
+        user_content = user_template.format(
+            category=result.category,
+            difficulty=result.difficulty,
+            prompt=result.prompt,
+            transcript=result.transcript(lang),
+        )
+        raw, error = "", None
+        for attempt in range(retries):
+            error = None
+            try:
+                async with self._semaphore:
+                    resp = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": self.model,
+                            "temperature": 0.0,
+                            "max_tokens": 2048,
+                            "messages": [
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_content},
+                            ],
+                        },
+                        timeout=self.timeout,
+                    )
+                    resp.raise_for_status()
+                    raw = resp.json()["choices"][0]["message"]["content"].strip()
+                    break
+            except Exception as e:
+                error = str(e)
+                if attempt < retries - 1:
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                break
+
+        if error and not raw:
+            return StressScore(
+                question_id=result.question_id,
+                turn_scores={},
+                broke_on=None,
+                held=False,
+                scores={k: 0 for k in WEIGHTS},
+                weighted_total=0.0,
+                reasoning={"strengths": "", "weaknesses": error, "notable": ""},
+                error=error,
+            )
+
+        try:
+            json_start = raw.find("{")
+            json_end = raw.rfind("}") + 1
+            if json_start == -1 or json_end == 0:
+                raise ValueError("No JSON found in response")
+            parsed = json.loads(raw[json_start:json_end])
+            scores = {k: int(v) for k, v in parsed.get("scores", {}).items()}
+            turn_scores = {k: int(v) for k, v in parsed.get("turn_scores", {}).items()}
+            broke_on = parsed.get("broke_on")
+            held = bool(parsed.get("held", broke_on is None))
+            return StressScore(
+                question_id=result.question_id,
+                turn_scores=turn_scores,
+                broke_on=broke_on,
+                held=held,
+                scores=scores,
+                weighted_total=compute_weighted_total(scores),
+                reasoning=parsed.get("reasoning", {}),
+                analysis=parsed.get("analysis", ""),
+            )
+        except Exception as e:
+            return StressScore(
+                question_id=result.question_id,
+                turn_scores={},
+                broke_on=None,
+                held=False,
+                scores={k: 0 for k in WEIGHTS},
+                weighted_total=0.0,
+                reasoning={"strengths": "", "weaknesses": f"JSON parse error: {e}", "notable": raw[:300]},
+                error=f"Parse error: {e}",
+            )
+
+    async def run_transcripts(
+        self,
+        results: list,
+        system_prompt: str,
+        user_template: str,
+        lang: str = "ru",
+        progress_cb=None,
+        cancel_event: Optional[asyncio.Event] = None,
+    ) -> list[StressScore]:
+        async with httpx.AsyncClient() as client:
+            tasks = [
+                self._judge_stress_one(client, r, system_prompt, user_template, lang)
+                for r in results
+            ]
+            scores = []
+            for coro in asyncio.as_completed(tasks):
+                if cancel_event and cancel_event.is_set():
+                    break
+                result = await coro
+                scores.append(result)
+                if progress_cb:
+                    progress_cb(result)
+            return sorted(scores, key=lambda s: s.question_id)

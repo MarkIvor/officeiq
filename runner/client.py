@@ -173,3 +173,55 @@ class ModelClient:
                 if progress_cb:
                     progress_cb(result)
             return sorted(results, key=lambda r: r.question_id)
+
+    async def chat(
+        self,
+        messages: list[dict],
+        http_client: Optional[httpx.AsyncClient] = None,
+        timeout: Optional[int] = None,
+        max_attempts: int = 3,
+    ) -> tuple[str, Optional[str]]:
+        """Single multi-turn chat completion. Returns (text, error)."""
+        timeout = timeout or self.config.timeout
+        owned_client = http_client is None
+        client = http_client or httpx.AsyncClient()
+        try:
+            error = None
+            text = ""
+            for attempt in range(max_attempts):
+                error = None
+                try:
+                    async with self._semaphore:
+                        resp = await client.post(
+                            f"{self.config.base_url.rstrip('/')}/chat/completions",
+                            headers={
+                                "Authorization": f"Bearer {self.config.api_key}",
+                                "Content-Type": "application/json",
+                            },
+                            json={
+                                "model": self.config.model,
+                                "messages": messages,
+                                "temperature": 0.3,
+                            },
+                            timeout=timeout,
+                        )
+                        resp.raise_for_status()
+                        data = resp.json()
+                        text = data["choices"][0]["message"]["content"]
+                        break
+                except httpx.HTTPStatusError as e:
+                    error = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
+                    if e.response.status_code in (429, 500, 502, 503, 504) and attempt < max_attempts - 1:
+                        await asyncio.sleep(min(2 ** attempt, 30))
+                        continue
+                    break
+                except Exception as e:
+                    error = str(e)
+                    if attempt < max_attempts - 1:
+                        await asyncio.sleep(2)
+                        continue
+                    break
+            return text, error
+        finally:
+            if owned_client:
+                await client.aclose()

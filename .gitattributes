@@ -1,0 +1,21 @@
+# Normalize line endings
+* text=auto
+*.py text
+*.js text
+*.css text
+*.html text
+*.yaml text
+*.md text
+*.bat text
+*.ps1 text
+
+# GitHub language stats: the product is the Python benchmark engine.
+# The SPA frontend is excluded from language stats, generated artifacts are
+# marked as generated so Linguist paints this repo as what it really is.
+ui/** linguist-vendored
+docs/** linguist-generated
+results/**.html linguist-generated
+LEADERBOARD.md linguist-generated
+
+# Binary
+*.png binary
