@@ -5,10 +5,10 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Tests](https://img.shields.io/github/actions/workflow/status/MarkIvor/officeiq/ci.yml?label=tests)
-![Leaderboard](https://img.shields.io/badge/Leaderboard-GitHub_Pages-4f6ef7)
+[![Leaderboard](https://img.shields.io/badge/Leaderboard-Quick_top-4f6ef7)](LEADERBOARD.md)
 ![Languages](https://img.shields.io/badge/Languages-RU%20%7C%20EN-blueviolet)
 
-[**🏆 Публичный лидерборд**](https://markivor.github.io/officeiq/) · [LEADERBOARD.md](LEADERBOARD.md) · [🇬🇧 English version](README.md)
+[**🏆 Публичный лидерборд**](LEADERBOARD.md) · [🇬🇧 English version](README.md)
 
 > Исследовательский вопрос: академические бенчмарки (MMLU, MT-Bench, Arena) не предсказывают,
 > как модель поведёт себя в реальной офисной работе — давлении, серых зонах, сложных разговорах.
@@ -22,8 +22,20 @@
 
 ### Топ моделей — Quick (20 вопросов)
 
-_Пока нет прогонов в этом режиме. Будь первым — [инструкция](README.ru.md#быстрый-старт)._
-Балл 0–10: средневзвешенная оценка 10 критериев. Полная таблица, все режимы и стресс-тест — в [LEADERBOARD.md](LEADERBOARD.md) и на [GitHub Pages](https://markivor.github.io/officeiq/).
+| # | Модель | Балл | Уровень | Безопасность | Adversarial | Охват | Язык | Дата |
+|---|--------|------|---------|--------------|-------------|-------|------|------|
+| 🥇 | GLM-5.3 | **8.65** | Сильный | 9.6 | 8.9 | 18/20 | EN | 2026-11-01 |
+| 🥈 | Kimi K3 | **8.64** | Сильный | 9.3 | 9.1 | 20/20 | EN | 2026-11-01 |
+| 🥉 | Claude Sonnet 5.5 | **8.55** | Сильный | 9.7 | 9.0 | 20/20 | EN | 2026-11-01 |
+| 4 | GPT-6.1 Sol | **8.53** | Сильный | 9.4 | 8.6 | 20/20 | EN | 2026-11-01 |
+| 5 | Grok 4.7 | **8.41** | Сильный | 9.5 | 7.7 | 20/20 | EN | 2026-11-01 |
+| 6 | DeepSeek V4.1 Flash | **8.40** | Сильный | 9.6 | 8.8 | 20/20 | EN | 2026-11-01 |
+| 7 | Claude Haiku 5.5 | **8.35** | Сильный | 9.4 | 8.9 | 20/20 | EN | 2026-11-01 |
+| 8 | GPT-5.5 | **7.90** | Хороший | 9.4 | 8.5 | 20/20 | EN | 2026-11-01 |
+| 9 | MiniMax M3 | **7.90** | Хороший | 9.2 | 7.3 | 14/20 | EN | 2026-11-01 |
+| 10 | Gemini 3.8 Flash | **7.62** | Хороший | 8.3 | 1.5 | 18/20 | EN | 2026-11-01 |
+
+Балл 0–10: средневзвешенная оценка 10 критериев, судья — Claude Opus 5.5. Полная таблица и стресс-тест — в [LEADERBOARD.md](LEADERBOARD.md).
 
 <!-- leaderboard-end -->
 
@@ -114,7 +126,7 @@ Judge (LLM-as-a-Judge) → Параллельная оценка по 10 кри�
         ↓
 WeightedScore          → Итоговый балл 0–10 с весами по критериям
         ↓
-Reports + UI + Leaderboard → HTML-отчёты, сравнение, CSV, публичный лидерборд (GitHub Pages)
+Reports + UI + Leaderboard → HTML-отчёты, сравнение, CSV, публичный лидерборд (LEADERBOARD.md)
 ```
 
 ## Что внутри
@@ -157,8 +169,7 @@ Auto-Tune замыкает петлю: собирает рекомендации
 - Экспорт CSV / Markdown, шеринг-сертификат
 - Рекомендации судьи для системного промпта — inline и сводно по категориям
 - **Публичный лидерборд**: каждый прогон, закоммиченный в `results/`, автоматически
-  пересобирает [LEADERBOARD.md](LEADERBOARD.md) и интерактивный
-  [лидерборд на GitHub Pages](https://markivor.github.io/officeiq/) через CI
+  пересобирает [LEADERBOARD.md](LEADERBOARD.md) и таблицы топа в обоих README через CI
 
 **Двуязычный интерфейс** — всё ПО переключается между 🇷🇺 русским и 🇬🇧 английским
 в один клик, независимо от языка бенчмарка.
@@ -192,10 +203,9 @@ python runner/main.py ... --stress --lang en
 
 ## Добавь свою модель в публичный лидерборд
 
-1. Прогони бенчмарк (режим Full = 100 вопросов, любой язык).
+1. Прогони бенчмарк (режим Quick = 20 вопросов, любой язык).
 2. Закоммить сгенерированные `results/*.json` (API-ключей там нет).
-3. Запушь. CI пересоберёт [LEADERBOARD.md](LEADERBOARD.md), обновит таблицу в README
-   и задеплоит интерактивный [лидерборд на GitHub Pages](https://markivor.github.io/officeiq/).
+3. Запушь. CI пересоберёт [LEADERBOARD.md](LEADERBOARD.md) и таблицы топа в обоих README.
 
 ## Как интерпретировать результаты
 
@@ -254,10 +264,10 @@ officeiq/
 │   └── rubric.yaml           # Критерии, веса, промпты судьи (RU/EN)
 ├── ui/                       # SPA: index.html + css/ + js/ (интерфейс RU/EN)
 ├── scripts/build_leaderboard.py  # Генератор публичного лидерборда
-├── docs/index.html           # Лидерборд GitHub Pages (генерируется автоматически)
+├── LEADERBOARD.md            # Публичный лидерборд (генерируется, режим Quick)
 ├── tests/                    # pytest-набор (парность данных, скоринг, i18n, …)
 ├── results/                  # JSON-прогоны — коммить, чтобы опубликовать
-└── .github/workflows/        # CI (тесты) + пайплайн лидерборда/Pages
+└── .github/workflows/        # CI (тесты) + пайплайн лидерборда
 ```
 
 ## Ограничения и честность

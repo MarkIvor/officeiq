@@ -5,10 +5,10 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Tests](https://img.shields.io/github/actions/workflow/status/MarkIvor/officeiq/ci.yml?label=tests)
-![Leaderboard](https://img.shields.io/badge/Leaderboard-GitHub_Pages-4f6ef7)
+[![Leaderboard](https://img.shields.io/badge/Leaderboard-Quick_top-4f6ef7)](LEADERBOARD.md)
 ![Languages](https://img.shields.io/badge/Languages-RU%20%7C%20EN-blueviolet)
 
-[**🏆 Public Leaderboard**](https://markivor.github.io/officeiq/) · [LEADERBOARD.md](LEADERBOARD.md) · [🇷🇺 Русская версия](README.ru.md)
+[**🏆 Public Leaderboard**](LEADERBOARD.md) · [🇷🇺 Русская версия](README.ru.md)
 
 > Research question: academic benchmarks (MMLU, MT-Bench, Arena) don't predict how a model
 > behaves in real office work — pressure, gray zones, tough conversations.
@@ -22,8 +22,20 @@
 
 ### Model Top — Quick (20 questions)
 
-_No runs in this mode yet. Be the first — see the [quick start](README.md#quick-start)._
-Score 0–10: weighted average across 10 criteria. Full tables, all modes and the multi-turn stress test — in [LEADERBOARD.md](LEADERBOARD.md) and on [GitHub Pages](https://markivor.github.io/officeiq/).
+| # | Model | Score | Level | Safety | Adversarial | Coverage | Lang | Date |
+|---|-------|-------|-------|--------|-------------|----------|------|------|
+| 🥇 | GLM-5.3 | **8.65** | Strong | 9.6 | 8.9 | 18/20 | EN | 2026-11-01 |
+| 🥈 | Kimi K3 | **8.64** | Strong | 9.3 | 9.1 | 20/20 | EN | 2026-11-01 |
+| 🥉 | Claude Sonnet 5.5 | **8.55** | Strong | 9.7 | 9.0 | 20/20 | EN | 2026-11-01 |
+| 4 | GPT-6.1 Sol | **8.53** | Strong | 9.4 | 8.6 | 20/20 | EN | 2026-11-01 |
+| 5 | Grok 4.7 | **8.41** | Strong | 9.5 | 7.7 | 20/20 | EN | 2026-11-01 |
+| 6 | DeepSeek V4.1 Flash | **8.40** | Strong | 9.6 | 8.8 | 20/20 | EN | 2026-11-01 |
+| 7 | Claude Haiku 5.5 | **8.35** | Strong | 9.4 | 8.9 | 20/20 | EN | 2026-11-01 |
+| 8 | GPT-5.5 | **7.90** | Good | 9.4 | 8.5 | 20/20 | EN | 2026-11-01 |
+| 9 | MiniMax M3 | **7.90** | Good | 9.2 | 7.3 | 14/20 | EN | 2026-11-01 |
+| 10 | Gemini 3.8 Flash | **7.62** | Good | 8.3 | 1.5 | 18/20 | EN | 2026-11-01 |
+
+Score 0–10: weighted average across 10 criteria, judge — Claude Opus 5.5. Full table and the stress test — in [LEADERBOARD.md](LEADERBOARD.md).
 
 <!-- leaderboard-end -->
 
@@ -96,7 +108,7 @@ Judge (LLM-as-a-Judge) → parallel scoring on 10 weighted criteria (RU / EN pro
         ↓
 WeightedScore          → final 0–10 score
         ↓
-Reports + UI + Leaderboard → HTML reports, compare, CSV, public leaderboard (GitHub Pages)
+Reports + UI + Leaderboard → HTML reports, compare, CSV, public leaderboard (LEADERBOARD.md)
 ```
 
 ## What's inside
@@ -137,8 +149,7 @@ on the winner. You get a ready-to-use prompt with a proven score delta.
 - CSV / Markdown export, shareable certificate
 - Judge-generated system-prompt recommendations — inline and per-category
 - **Public leaderboard**: every run committed to `results/` automatically rebuilds
-  [LEADERBOARD.md](LEADERBOARD.md) and the interactive
-  [GitHub Pages leaderboard](https://markivor.github.io/officeiq/) via CI
+  [LEADERBOARD.md](LEADERBOARD.md) and the top tables in both READMEs via CI
 
 **Bilingual UI** — the whole interface switches between 🇷🇺 Russian and 🇬🇧 English
 in one click, independently of the benchmark language.
@@ -172,10 +183,9 @@ python runner/main.py ... --stress --lang en
 
 ## Adding your model to the public leaderboard
 
-1. Run the benchmark (Full mode = 100 questions, any language).
+1. Run the benchmark (Quick mode = 20 questions, any language).
 2. Commit the generated `results/*.json` (they contain no API keys).
-3. Push. CI rebuilds [LEADERBOARD.md](LEADERBOARD.md), updates the README table
-   and deploys the interactive [GitHub Pages leaderboard](https://markivor.github.io/officeiq/).
+3. Push. CI rebuilds [LEADERBOARD.md](LEADERBOARD.md) and the top tables in both READMEs.
 
 ## Interpreting the score
 
@@ -234,10 +244,10 @@ officeiq/
 │   └── rubric.yaml           # Criteria, weights, judge prompts (RU/EN)
 ├── ui/                       # SPA: index.html + css/ + js/ (RU/EN interface)
 ├── scripts/build_leaderboard.py  # Public leaderboard generator
-├── docs/index.html           # GitHub Pages leaderboard (auto-generated)
+├── LEADERBOARD.md            # Public leaderboard (auto-generated, Quick mode)
 ├── tests/                    # pytest suite (data parity, scoring, i18n, …)
 ├── results/                  # Run JSON files — commit them to publish
-└── .github/workflows/        # CI (tests) + leaderboard/Pages pipeline
+└── .github/workflows/        # CI (tests) + leaderboard pipeline
 ```
 
 ## Honesty & limitations

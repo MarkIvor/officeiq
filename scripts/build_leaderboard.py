@@ -2,20 +2,18 @@
 """Build the public leaderboard from results/*.json.
 
 Outputs:
-  - LEADERBOARD.md      static markdown leaderboard (English primary)
-  - docs/index.html     interactive leaderboard for GitHub Pages
+  - LEADERBOARD.md      static markdown leaderboard (English primary, Quick mode)
   - README.md / README.ru.md  top-10 table injected between markers
 
 Run from repo root:  python scripts/build_leaderboard.py
-Exits 0 even with no results (generates placeholder pages).
+Exits 0 even with no results (generates a placeholder).
 """
 import argparse
 import json
 from datetime import datetime
 from pathlib import Path
 
-BENCHMARK_MODES = {"full", "quick"}
-EXCLUDED_MODES = {"ab_a", "ab_b", "consistency", "retry", "autotune"}
+EXCLUDED_MODES = {"ab_a", "ab_b", "consistency", "retry", "autotune", "autotune_a", "autotune_b1", "autotune_b2", "autotune_b3", "full"}
 
 MEDALS = ["🥇", "🥈", "🥉"]
 
@@ -65,13 +63,16 @@ def load_runs(results_dir: Path) -> list:
             mode = meta.get("mode", "full")
             if mode in EXCLUDED_MODES:
                 continue
+            coverage = meta.get("coverage")
+            if coverage is None:
+                coverage = meta.get("answered", 0)
             runs.append({
                 "filename": f.name,
                 "name": meta["model_name"],
                 "score": round(float(score), 2),
                 "mode": mode,
                 "lang": meta.get("lang", "ru"),
-                "coverage": meta.get("coverage", meta.get("answered", 0)),
+                "coverage": coverage,
                 "total": meta.get("total_questions", 0),
                 "date": (meta.get("run_at") or "")[:10],
                 "category_scores": summary.get("category_scores") or {},
@@ -106,6 +107,11 @@ def _cat(run: dict, key: str) -> str:
     return f"{v:.1f}" if isinstance(v, (int, float)) else "—"
 
 
+def _crit(run: dict, key: str) -> str:
+    v = run["criteria_scores"].get(key)
+    return f"{v:.1f}" if isinstance(v, (int, float)) else "—"
+
+
 def build_table(runs: list, lang: str = "en") -> str:
     """Markdown leaderboard table for one mode."""
     if not runs:
@@ -127,7 +133,7 @@ def build_table(runs: list, lang: str = "en") -> str:
         lvl = level_ru(r["score"]) if lang == "ru" else level_en(r["score"])
         rows.append(
             f"| {rank} | {r['name']} | **{r['score']:.2f}** | {lvl} "
-            f"| {_cat(r, 'safety')} | {_cat(r, 'adversarial')} "
+            f"| {_crit(r, 'safety')} | {_cat(r, 'adversarial')} "
             f"| {r['coverage']}/{r['total']} | {lang_tag.get(r['lang'], r['lang'])} | {r['date']} |"
         )
     return header + "\n".join(rows) + "\n"
@@ -154,7 +160,6 @@ def build_stress_table(runs: list, lang: str = "en") -> str:
 
 
 def build_leaderboard_md(runs: list, repo_url: str) -> str:
-    full = best_per_model(runs, "full")
     quick = best_per_model(runs, "quick")
     stress = best_per_model(runs, "stress")
     generated = datetime.now().strftime("%Y-%m-%d %H:%M UTC")
@@ -166,12 +171,8 @@ Which LLM should you put in front of your corporate assistant **today**?
 Русская версия таблиц — в [README.ru.md](README.ru.md).
 
 > Скоринг: средневзвешенный балл 0–10 по 10 критериям (Safety ×1.5, Ethics ×1.3, …).
-> Full = 100 вопросов, Quick = 20 вопросов (одно и то же множество и рубрика, но выборка меньше —
-> не сравнивай Full и Quick напрямую). RU/EN = язык вопросов бенчмарка.
-
-## Full mode (100 questions)
-
-{build_table(full, 'en')}
+> Все прогоны — **Quick mode** (20 вопросов: 10 категорий × 2 вопроса, RU/EN = язык вопросов бенчмарка,
+> судья — Claude Opus 5.5). Баллы разных языков сравнивать можно, но осторожно.
 
 ## Quick mode (20 questions)
 
@@ -202,21 +203,15 @@ Methodology: [README.md](README.md) · Run your own: [officeiq](https://github.c
 
 
 def build_readme_insert(runs: list, lang: str = "en") -> str:
-    full = best_per_model(runs, "full")
-    mode = "full"
-    board = full
-    if not board:
-        board = best_per_model(runs, "quick")
-        mode = "quick"
+    board = best_per_model(runs, "quick")
     if lang == "ru":
-        title = f"### Топ моделей — {mode_label(mode, 'ru')}"
-        note = ("Балл 0–10: средневзвешенная оценка 10 критериев. Полная таблица, все режимы и стресс-тест — "
-                "в [LEADERBOARD.md](LEADERBOARD.md) и на [GitHub Pages](https://markivor.github.io/officeiq/).")
+        title = f"### Топ моделей — {mode_label('quick', 'ru')}"
+        note = ("Балл 0–10: средневзвешенная оценка 10 критериев, судья — Claude Opus 5.5. "
+                "Полная таблица и стресс-тест — в [LEADERBOARD.md](LEADERBOARD.md).")
     else:
-        title = f"### Model Top — {mode_label(mode, 'en')}"
-        note = ("Score 0–10: weighted average across 10 criteria. Full tables, all modes and the "
-                "multi-turn stress test — in [LEADERBOARD.md](LEADERBOARD.md) and on "
-                "[GitHub Pages](https://markivor.github.io/officeiq/).")
+        title = f"### Model Top — {mode_label('quick', 'en')}"
+        note = ("Score 0–10: weighted average across 10 criteria, judge — Claude Opus 5.5. "
+                "Full table and the stress test — in [LEADERBOARD.md](LEADERBOARD.md).")
     return f"{title}\n\n{build_table(board[:10], lang)}\n{note}\n"
 
 
@@ -228,159 +223,6 @@ def update_readme(path: Path, insert: str) -> bool:
     _, after = rest.split(MARKER_END, 1)
     path.write_text(before + MARKER_START + "\n\n" + insert + "\n" + MARKER_END + after, encoding="utf-8")
     return True
-
-
-DOCS_TEMPLATE = r"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OfficeIQ Bench — Public Leaderboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-:root{--bg:#f8f9fb;--bg2:#fff;--bg3:#f1f3f7;--border:#e4e8ef;--text:#0f1623;--text2:#4b5672;--text3:#8892a8;--accent:#4f6ef7;--green:#16a34a;--yellow:#d97706;--orange:#ea580c;--red:#dc2626}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;padding:32px 16px}
-.wrap{max-width:1060px;margin:0 auto}
-h1{font-size:1.7rem;letter-spacing:-.02em}
-.sub{color:var(--text3);font-size:.9rem;margin:6px 0 4px}
-.gen{color:var(--text3);font-size:.75rem;margin-bottom:24px}
-.badges{margin-bottom:22px;display:flex;gap:8px;flex-wrap:wrap}
-.badge{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:3px 10px;border-radius:999px;font-size:12px}
-.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;width:fit-content;margin-bottom:18px}
-.tab{padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text3);border:none;background:transparent}
-.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.langbtn{margin-left:auto;padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer}
-.toolbar{display:flex;align-items:center;margin-bottom:18px}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:20px;overflow:hidden}
-.card h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:16px 20px 0}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{background:var(--bg);color:var(--text3);font-weight:600;text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;white-space:nowrap}
-th:hover{color:var(--text)}
-td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--bg)}
-.pill{display:inline-block;padding:2px 9px;border-radius:6px;font-weight:700;font-size:13px;min-width:44px;text-align:center}
-.medal{font-size:1.15rem}
-.mname{font-weight:600;color:var(--text)}
-.mlang{font-size:10px;color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:1px 5px;margin-left:7px;vertical-align:middle}
-.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:20px}
-@media(max-width:860px){.grid{grid-template-columns:1fr}}
-.chartbox{position:relative;height:330px;padding:12px}
-footer{color:var(--text3);font-size:12px;margin-top:26px;text-align:center}
-footer a{color:var(--accent)}
-.empty{text-align:center;padding:60px 20px;color:var(--text3)}
-.empty .big{font-size:2.2rem;margin-bottom:10px}
-code{background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:12px}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>🏆 OfficeIQ Bench — Public Leaderboard</h1>
-  <div class="sub" data-l="subtitle">Which LLM should you trust with your office work? 100 scenarios · 10 criteria · LLM-as-a-judge.</div>
-  <div class="gen" data-l="generated">Generated __GENERATED__ · auto-rebuilt on every push to results/</div>
-  <div class="toolbar">
-    <div class="tabs" id="tabs"></div>
-    <button class="langbtn" id="langbtn" onclick="toggleLang()">RU</button>
-  </div>
-  <div id="board"></div>
-  <footer data-l="footer">Methodology &amp; quick start: <a href="https://github.com/MarkIvor/officeiq">MarkIvor/officeiq</a> · Add your model — commit a run to <code>results/</code> and CI rebuilds this page.</footer>
-</div>
-<script>
-const RUNS = __DATA__;
-const CRIT = ["accuracy","completeness","instruction_following","practicality","tone_style","structure","conciseness","safety","ethical_soundness","autonomy"];
-const COLORS = ['#4f6ef7','#e84393','#0ea5e9','#f97316','#8b5cf6','#10b981'];
-const L = {
- en:{subtitle:"Which LLM should you trust with your office work? 100 scenarios · 10 criteria · LLM-as-a-judge.",
-     generated:"Generated __GENERATED__ · auto-rebuilt on every push to results/",
-     full:"Full (100)",quick:"Quick (20)",stress:"Stress (multi-turn)",model:"Model",score:"Score",level:"Level",
-     safety:"Safety",adv:"Adversarial",coverage:"Coverage",date:"Date",resilience:"Resilience",held:"Held to the end",
-     caved:"Caved on turn",rank:"#",radar:"Top-5 by 10 criteria",
-     levels:["Elite","Strong","Good","Average","Weak"],
-     empty:"No runs yet — be the first.",empty2:"Run the benchmark and commit results/ — this page rebuilds itself.",
-     footer:'Methodology & quick start: <a href="https://github.com/MarkIvor/officeiq">MarkIvor/officeiq</a> · Add your model — commit a run to <code>results/</code> and CI rebuilds this page.'},
- ru:{subtitle:"Какой LLM можно доверить офисную работу? 100 сценариев · 10 критериев · LLM-судья.",
-     generated:"Сгенерировано __GENERATED__ · пересобирается автоматически при обновлении results/",
-     full:"Full (100)",quick:"Quick (20)",stress:"Стресс (мультиход)",model:"Модель",score:"Балл",level:"Уровень",
-     safety:"Безопасность",adv:"Adversarial",coverage:"Охват",date:"Дата",resilience:"Стрессоустойчивость",held:"Держалась до конца",
-     caved:"Сдалась на ходу",rank:"#",radar:"Топ-5 по 10 критериям",
-     levels:["Элита","Сильный","Хороший","Средний","Слабый"],
-     empty:"Прогонов пока нет — будь первым.",empty2:"Прогони бенчмарк и закоммить results/ — страница пересоберётся сама.",
-     footer:'Методология и быстрый старт: <a href="https://github.com/MarkIvor/officeiq">MarkIvor/officeiq</a> · Добавь свою модель — закоммить прогон в <code>results/</code> и CI пересоберёт страницу.'}
-};
-let LANG='en', MODE='full', SORT={key:'score',dir:-1}, radar=null;
-function t(k){return L[LANG][k]}
-function lvl(s){return t("levels")[s>=9?0:s>=8?1:s>=7?2:s>=6?3:4]}
-function sc(s){return s>=8?'#16a34a':s>=6?'#d97706':s>=4?'#ea580c':'#dc2626'}
-function scbg(s){return s>=8?'#dcfce7':s>=6?'#fef3c7':s>=4?'#ffedd5':'#fee2e2'}
-function best(runs){const m={};runs.forEach(r=>{const c=m[r.name];if(!c||(r.score>c.score)||(r.score===c.score&&r.date>c.date))m[r.name]=r});return Object.values(m).sort((a,b)=>b.score-a.score)}
-function data(mode){return best(RUNS.filter(r=>r.mode===mode))}
-function modes(){const ms=[];if(data('full').length)ms.push('full');if(data('quick').length)ms.push('quick');if(data('stress').length)ms.push('stress');return ms.length?ms:['full']}
-function toggleLang(){LANG=LANG==='en'?'ru':'en';document.getElementById('langbtn').textContent=LANG==='en'?'RU':'EN';document.documentElement.lang=LANG;render()}
-function fmt(x,d=1){return typeof x==='number'?x.toFixed(d):'—'}
-function renderTabs(){
-  const tabs=document.getElementById('tabs');const ms=modes();
-  if(!ms.includes(MODE))MODE=ms[0];
-  tabs.innerHTML=ms.map(m=>`<button class="tab${m===MODE?' active':''}" onclick="MODE='${m}';render()">${t(m==='stress'?'stress':m)}</button>`).join('');
-}
-function render(){
-  renderTabs();
-  const board=document.getElementById('board');const rows=data(MODE);
-  document.querySelectorAll('[data-l]').forEach(el=>{el.innerHTML=t(el.dataset.l)});
-  if(!rows.length){board.innerHTML=`<div class="card"><div class="empty"><div class="big">◈</div><p>${t('empty')}</p><p style="font-size:12px;margin-top:6px">${t('empty2')}</p></div></div>`;return}
-  const cols=MODE==='stress'
-    ?[['resilience','resilience'],['held_pct','held'],['broke','caved'],['date','date']]
-    :[['score','score'],['level','level'],['safety','safety'],['adversarial','adv'],['coverage','coverage'],['lang','lang'],['date','date']];
-  const sorted=[...rows].sort((a,b)=>{const ka=a[SORT.key],kb=b[SORT.key];return (typeof ka==='string'?ka.localeCompare(kb):((kb??-1)-(ka??-1)))*SORT.dir*-1});
-  let table=`<div class="card"><table><thead><tr><th>${t('rank')}</th><th data-s="name">${t('model')}</th>`;
-  cols.forEach(([k,lbl])=>{table+=`<th data-s="${k}" onclick="sortBy('${k}')">${t(lbl)}</th>`});
-  table+=`</tr></thead><tbody>`;
-  sorted.forEach((r,i)=>{
-    const medal=i<3?['🥇','🥈','🥉'][i]:i+1;
-    let cells='';
-    if(MODE==='stress'){
-      const broke=Object.keys(r.broke_distribution||{}).length?Object.entries(r.broke_distribution).sort().map(([k,v])=>`t${k}: ${v}`).join(', '):'—';
-      cells=`<td><span class="pill" style="background:${scbg((r.resilience_avg||0))};color:${sc((r.resilience_avg||0))}">${fmt(r.resilience_avg,2)}</span></td><td>${r.held_pct??0}%</td><td>${broke}</td>`;
-    }else{
-      const saf=(r.category_scores||{}).safety,adv=(r.category_scores||{}).adversarial;
-      cells=`<td><span class="pill" style="background:${scbg(r.score)};color:${sc(r.score)}">${r.score.toFixed(2)}</span></td><td>${lvl(r.score)}</td>
-      <td>${typeof saf==='number'?'<span class="pill" style="background:'+scbg(saf)+';color:'+sc(saf)+'">'+saf.toFixed(1)+'</span>':'—'}</td>
-      <td>${typeof adv==='number'?'<span class="pill" style="background:'+scbg(adv)+';color:'+sc(adv)+'">'+adv.toFixed(1)+'</span>':'—'}</td>
-      <td>${r.coverage}/${r.total}</td><td><span class="mlang">${(r.lang||'ru').toUpperCase()}</span></td>`;
-    }
-    table+=`<tr><td class="medal">${medal}</td><td><span class="mname">${esc(r.name)}</span>${MODE==='stress'?'<span class="mlang">'+(r.lang||'ru').toUpperCase()+'</span>':''}</td>${cells}<td style="color:var(--text3);font-size:12px">${r.date||''}</td></tr>`;
-  });
-  table+='</tbody></table></div>';
-  let radarHtml='';
-  if(MODE!=='stress'){
-    radarHtml=`<div class="card"><h2>${t('radar')}</h2><div class="chartbox"><canvas id="radar"></canvas></div></div>`;
-    board.innerHTML=`<div class="grid"><div>${table}</div>${radarHtml}</div>`;
-    drawRadar(rows.slice(0,5));
-  }else{board.innerHTML=table}
-}
-function sortBy(k){if(SORT.key===k)SORT.dir*=-1;else SORT={key:k,dir:-1};render()}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function drawRadar(rows){
-  const el=document.getElementById('radar');if(!el||!rows.length)return;
-  if(radar)radar.destroy();
-  radar=new Chart(el,{type:'radar',
-    data:{labels:CRIT,datasets:rows.map((r,i)=>({label:r.name,data:CRIT.map(c=>(r.criteria_scores||{})[c]||0),
-      borderColor:COLORS[i%6],backgroundColor:COLORS[i%6]+'18',pointBackgroundColor:COLORS[i%6],pointRadius:3,borderWidth:2}))},
-    options:{responsive:true,maintainAspectRatio:false,
-      scales:{r:{min:0,max:10,grid:{color:'#e4e8ef'},angleLines:{color:'#e4e8ef'},ticks:{color:'#8892a8',stepSize:2,backdropColor:'transparent'},pointLabels:{color:'#4b5672',font:{size:10}}}},
-      plugins:{legend:{labels:{color:'#4b5672',font:{size:11}}}}}});
-}
-render();
-</script>
-</body>
-</html>
-"""
-
-
-def build_docs_page(runs: list) -> str:
-    generated = datetime.now().strftime("%Y-%m-%d %H:%M")
-    payload = json.dumps(runs, ensure_ascii=False)
-    return DOCS_TEMPLATE.replace("__DATA__", payload).replace("__GENERATED__", generated)
 
 
 def main():
@@ -397,14 +239,10 @@ def main():
     leaderboard_md = build_leaderboard_md(runs, repo_url)
     (root / "LEADERBOARD.md").write_text(leaderboard_md, encoding="utf-8")
 
-    docs_dir = root / "docs"
-    docs_dir.mkdir(exist_ok=True)
-    (docs_dir / "index.html").write_text(build_docs_page(runs), encoding="utf-8")
-
     en_updated = update_readme(root / "README.md", build_readme_insert(runs, "en"))
     ru_updated = update_readme(root / "README.ru.md", build_readme_insert(runs, "ru"))
 
-    print(f"leaderboard: {len(runs)} runs -> LEADERBOARD.md, docs/index.html; "
+    print(f"leaderboard: {len(runs)} runs -> LEADERBOARD.md; "
           f"README.md {'updated' if en_updated else 'markers missing'}, "
           f"README.ru.md {'updated' if ru_updated else 'markers missing'}")
 

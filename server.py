@@ -85,6 +85,9 @@ def get_all_results() -> list[dict]:
         try:
             with open(f, encoding="utf-8") as fp:
                 data = json.load(fp)
+            coverage = data["meta"].get("coverage")
+            if coverage is None:
+                coverage = data["meta"].get("answered", 0)
             results.append({
                 "filename": f.name,
                 "model_name": data["meta"]["model_name"],
@@ -94,7 +97,7 @@ def get_all_results() -> list[dict]:
                 "run_at": data["meta"]["run_at"],
                 "category_scores": data["summary"]["category_scores"],
                 "criteria_scores": data["summary"]["criteria_scores"],
-                "coverage": data["meta"].get("coverage", data["meta"].get("answered", 0)),
+                "coverage": coverage,
                 "skipped": data["meta"].get("skipped", []),
                 "mode": data["meta"].get("mode", "full"),
                 "lang": data["meta"].get("lang", "ru"),

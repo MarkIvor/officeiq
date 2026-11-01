@@ -10,6 +10,9 @@ venv/
 .env
 *.key
 
+# Local run logs
+logs/
+
 # OS noise
 .DS_Store
 Thumbs.db

@@ -6,6 +6,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 import yaml
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -61,6 +65,7 @@ def build_run_data(
     scores: list,
     questions: list,
     lang: str = "ru",
+    mode: str = "full",
 ) -> dict:
     q_map = {q["id"]: q for q in questions}
     r_map = {r.question_id: r for r in responses}
@@ -86,6 +91,7 @@ def build_run_data(
 
     all_weighted = [i["weighted_total"] for i in items if not i["judge_error"]]
     overall = round(sum(all_weighted) / len(all_weighted), 2) if all_weighted else 0.0
+    coverage = len(all_weighted)
 
     cat_scores = {}
     for item in items:
@@ -114,8 +120,10 @@ def build_run_data(
             "run_at": datetime.now().isoformat(),
             "total_questions": len(questions),
             "answered": len([r for r in responses if not r.error]),
+            "coverage": coverage,
             "judge_errors": len([s for s in scores if s.error]),
             "lang": lang,
+            "mode": mode,
         },
         "summary": {
             "overall_score": overall,
@@ -154,8 +162,16 @@ async def run_benchmark(args):
     limit = cfg.get("limit") or args.limit
     mode = "stress" if args.stress else ("quick" if args.quick else "full")
 
-    questions = load_questions(categories=categories, limit=limit, lang=lang) if not args.stress \
-        else _load_questions(DATA_DIR, mode="quick", lang=lang)
+    if args.stress:
+        questions = _load_questions(DATA_DIR, mode="quick", lang=lang)
+    else:
+        questions = _load_questions(
+            DATA_DIR,
+            categories=categories,
+            limit=limit,
+            mode="quick" if args.quick else None,
+            lang=lang,
+        )
     rubric = load_rubric()
 
     model_config = ModelConfig(
@@ -177,7 +193,7 @@ async def run_benchmark(args):
     if args.stress:
         run_data = await run_stress_cli(args, client, questions, rubric, judge_key, lang, cfg)
     else:
-        run_data = await run_single_cli(args, client, questions, rubric, judge_key, lang, cfg)
+        run_data = await run_single_cli(args, client, questions, rubric, judge_key, lang, cfg, mode=mode)
 
     result_path = save_run(run_data, cfg.get("name", cfg.get("model", "run")))
     print(f"\n✓ Results: {result_path}")
@@ -197,7 +213,7 @@ async def run_benchmark(args):
     print(f"✓ HTML report: {report_path}")
 
 
-async def run_single_cli(args, client, questions, rubric, judge_key, lang, cfg):
+async def run_single_cli(args, client, questions, rubric, judge_key, lang, cfg, mode="full"):
     responses = []
 
     def on_response(r):
@@ -212,6 +228,7 @@ async def run_single_cli(args, client, questions, rubric, judge_key, lang, cfg):
     judge = Judge(
         api_key=judge_key,
         model=args.judge_model,
+        base_url=args.judge_base_url or cfg["base_url"],
         concurrency=3,
     )
     scores = []
@@ -228,7 +245,7 @@ async def run_single_cli(args, client, questions, rubric, judge_key, lang, cfg):
     )
     print(f"\n✓ Judged {len([s for s in scores if not s.error])}/{len(questions)}")
 
-    return build_run_data(cfg, responses, scores, questions, lang=lang)
+    return build_run_data(cfg, responses, scores, questions, lang=lang, mode=mode)
 
 
 async def run_stress_cli(args, client, questions, rubric, judge_key, lang, cfg):
@@ -242,7 +259,7 @@ async def run_stress_cli(args, client, questions, rubric, judge_key, lang, cfg):
     print(f"\n✓ Stress dialogues: {len(results)}/{len(questions)}")
 
     print("\nJudging transcripts...")
-    judge = Judge(api_key=judge_key, model=args.judge_model, concurrency=3)
+    judge = Judge(api_key=judge_key, model=args.judge_model, base_url=args.judge_base_url or cfg["base_url"], concurrency=3)
     scores = []
 
     def on_score(s):
@@ -271,6 +288,7 @@ def main():
     parser.add_argument("--system-prompt", help="System prompt")
     parser.add_argument("--judge-key", help="API key for the judge")
     parser.add_argument("--judge-model", default="claude-sonnet-4-5", help="Judge model")
+    parser.add_argument("--judge-base-url", default=None, help="Judge base URL (defaults to the model's base URL)")
     parser.add_argument("--categories", help="Categories, comma-separated")
     parser.add_argument("--limit", type=int, help="Question limit")
     parser.add_argument("--lang", default="ru", choices=["ru", "en"], help="Benchmark language (ru/en)")

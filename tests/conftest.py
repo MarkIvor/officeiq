@@ -83,7 +83,7 @@ def make_stress_score(
     )
 
 
-def make_run(model_name="Model A", score=7.5, mode="full", lang="ru"):
+def make_run(model_name="Model A", score=7.5, mode="quick", lang="ru"):
     return {
         "meta": {
             "model_name": model_name,

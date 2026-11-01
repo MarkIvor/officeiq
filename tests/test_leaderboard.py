@@ -25,13 +25,22 @@ def test_load_runs_excludes_ab_mode(fake_runs_dir, run_factory):
     assert all(r["mode"] not in ("ab_a", "ab_b") for r in runs)
 
 
+def test_load_runs_excludes_full_mode(fake_runs_dir, run_factory):
+    (fake_runs_dir / "full.json").write_text(
+        json.dumps(run_factory("Model F", 9.9, mode="full"), ensure_ascii=False), encoding="utf-8"
+    )
+    runs = lb.load_runs(fake_runs_dir)
+    assert all(r["mode"] != "full" for r in runs)
+    assert all(r["name"] != "Model F" for r in runs)
+
+
 def test_load_runs_missing_dir(tmp_path):
     assert lb.load_runs(tmp_path / "no_such_dir") == []
 
 
 def test_best_per_model_keeps_highest_and_sorts_desc(fake_runs_dir):
     runs = lb.load_runs(fake_runs_dir)
-    best = lb.best_per_model(runs, "full")
+    best = lb.best_per_model(runs, "quick")
     assert len(best) == 2
     assert best[0]["name"] == "Model B"
     assert best[0]["score"] == 8.2
@@ -41,18 +50,18 @@ def test_best_per_model_keeps_highest_and_sorts_desc(fake_runs_dir):
 
 
 def test_best_per_model_filters_by_mode(fake_runs_dir, run_factory):
-    (fake_runs_dir / "quick.json").write_text(
-        json.dumps(run_factory("Model C", 4.0, mode="quick"), ensure_ascii=False), encoding="utf-8"
+    (fake_runs_dir / "stress.json").write_text(
+        json.dumps(run_factory("Model C", 4.0, mode="stress"), ensure_ascii=False), encoding="utf-8"
     )
     runs = lb.load_runs(fake_runs_dir)
-    full = lb.best_per_model(runs, "full")
     quick = lb.best_per_model(runs, "quick")
-    assert [r["name"] for r in full] == ["Model B", "Model A"]
-    assert [r["name"] for r in quick] == ["Model C"]
+    stress = lb.best_per_model(runs, "stress")
+    assert [r["name"] for r in quick] == ["Model B", "Model A"]
+    assert [r["name"] for r in stress] == ["Model C"]
 
 
 def test_build_table_markdown(fake_runs_dir):
-    runs = lb.best_per_model(lb.load_runs(fake_runs_dir), "full")
+    runs = lb.best_per_model(lb.load_runs(fake_runs_dir), "quick")
     table = lb.build_table(runs, "en")
     lines = [l for l in table.splitlines() if l.strip()]
     assert all(l.startswith("|") for l in lines)
@@ -64,7 +73,7 @@ def test_build_table_markdown(fake_runs_dir):
 
 
 def test_build_table_ru(fake_runs_dir):
-    runs = lb.best_per_model(lb.load_runs(fake_runs_dir), "full")
+    runs = lb.best_per_model(lb.load_runs(fake_runs_dir), "quick")
     table = lb.build_table(runs, "ru")
     assert "| # | Модель | Балл |" in table
     assert "Model B" in table
@@ -78,7 +87,7 @@ def test_build_table_empty_quick_start_text():
 def test_build_readme_insert_en(fake_runs_dir):
     insert = lb.build_readme_insert(lb.load_runs(fake_runs_dir), "en")
     assert "Model Top" in insert
-    assert "Full (100 questions)" in insert
+    assert "Quick (20 questions)" in insert
     assert "Model B" in insert
     assert "8.20" in insert
 
@@ -86,7 +95,7 @@ def test_build_readme_insert_en(fake_runs_dir):
 def test_build_readme_insert_ru(fake_runs_dir):
     insert = lb.build_readme_insert(lb.load_runs(fake_runs_dir), "ru")
     assert "Топ моделей" in insert
-    assert "Full (100 вопросов)" in insert
+    assert "Quick (20 вопросов)" in insert
 
 
 def test_build_readme_insert_empty_runs_quick_start():
@@ -134,8 +143,8 @@ def test_update_readme_missing_file_returns_false(tmp_path):
 
 def test_build_leaderboard_md_sections(fake_runs_dir):
     md = lb.build_leaderboard_md(lb.load_runs(fake_runs_dir), "https://github.com/x/y")
-    assert "## Full mode (100 questions)" in md
     assert "## Quick mode (20 questions)" in md
+    assert "Full mode" not in md
     assert "Model B" in md
 
 
