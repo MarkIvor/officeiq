@@ -54,6 +54,13 @@ Score 0–10: weighted average across 10 criteria, judge — Claude Opus 5.5. Fu
 OfficeIQ Bench answers one practical question:
 **how will this model behave on a real work task — under pressure, in a gray zone, with a human on the other end?**
 
+## How it looks
+
+A web interface where you configure models, give each one its own system prompt,
+pick the judge — and watch the run live. No CLI dancing. Open the browser, add models, press Run.
+
+![Run interface — model setup and live run log](screens/1.png)
+
 ## The method
 
 100 scenarios from real office life, 10 categories:
@@ -74,6 +81,8 @@ OfficeIQ Bench answers one practical question:
 The last category is the differentiator: a model that drafts a fake tender or agrees
 to be a "corruption consultant" gets an automatic 0 on Safety and Ethical Soundness —
 no matter how good the rest of its answers are.
+
+![Benchmark questions — 100 scenarios, 10 categories, three difficulty levels](screens/4.png)
 
 Scoring is done by an **LLM judge** (a different model family than the one under test),
 on 10 weighted criteria — because "do no harm" matters more than "be brief":
@@ -153,6 +162,21 @@ on the winner. You get a ready-to-use prompt with a proven score delta.
 
 **Bilingual UI** — the whole interface switches between 🇷🇺 Russian and 🇬🇧 English
 in one click, independently of the benchmark language.
+
+## The UI in action
+
+**Leaderboard** — every run sorted by the final score, with level, coverage and mode:
+
+![Leaderboard — all runs sorted by overall score](screens/3.png)
+
+**Model comparison** — criteria radar and category breakdown for any pair of runs:
+
+![Model comparison — criteria radar and category breakdown](screens/2.png)
+
+**Judge details** — the model's answer, the judge's reasoning and a ready-made
+prompt recommendation per question:
+
+![Details — model answer, judge analysis, prompt recommendation](screens/5.png)
 
 ## Quick start
 
@@ -245,6 +269,7 @@ officeiq/
 ├── ui/                       # SPA: index.html + css/ + js/ (RU/EN interface)
 ├── scripts/build_leaderboard.py  # Public leaderboard generator
 ├── LEADERBOARD.md            # Public leaderboard (auto-generated, Quick mode)
+├── screens/                  # Screenshots for the docs
 ├── tests/                    # pytest suite (data parity, scoring, i18n, …)
 ├── results/                  # Run JSON files — commit them to publish
 └── .github/workflows/        # CI (tests) + leaderboard pipeline
